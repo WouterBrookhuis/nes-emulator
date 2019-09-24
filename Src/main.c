@@ -28,21 +28,44 @@ static void Event(SDL_Event* event);
 #define HALF_MEM_WINDOW_SIZE  7
 #define MEM2_WINDOW_SIZE      16
 
+
+#define NES_SCREEN_WIDTH    256         // Width of the NES screen output
+#define NES_SCREEN_HEIGHT   240         // Height of the NES screen output
+#define NES_SCREEN_SCALE    2           // Scaling done to NES screen output before displaying
+
+#define FONT_SIZE           16          // Size of the font in pixels
+#define STATUS_BAR_ROWS     2
+#define STATUS_BAR_HEIGHT   (FONT_SIZE * STATUS_BAR_ROWS) // Height of the top of screen status bar
+
+#define DEBUG_VIEW_CHARS    32          // Number of chars that fit in the debug view
+#define DEBUG_VIEW_WIDTH    (FONT_SIZE * DEBUG_VIEW_CHARS)  // Width of debug view next to NES screen
+
+#define WINDOW_WIDTH        (NES_SCREEN_WIDTH * NES_SCREEN_SCALE + DEBUG_VIEW_WIDTH)
+#define WINDOW_HEIGHT       (NES_SCREEN_HEIGHT * NES_SCREEN_SCALE + STATUS_BAR_HEIGHT)
+
+#define STATUS_BAR_CHARS_PER_ROW    (WINDOW_WIDTH / FONT_SIZE)  // Number of characters in the status bar
+
+#define MEMORY_VIEW_COLUMNS 8
+#define MEMORY_VIEW_ROWS    8
+#define MEMORY_VIEW_CHARS_PER_ROW   ((MEMORY_VIEW_COLUMNS - 1) * 3 + 2 + 6)
+
 static Font_t _font;
+static char _statusBarBuffer[STATUS_BAR_CHARS_PER_ROW * STATUS_BAR_ROWS + 1];
 static char _logBuffer[2048];
 static char _textBuffer[128];
 static char _memTextBuffer[HALF_MEM_WINDOW_SIZE * 2 + 1][128];
-static char _memTextBuffer2[MEM2_WINDOW_SIZE][128];
+static char _memoryViewBuffer[MEMORY_VIEW_CHARS_PER_ROW * MEMORY_VIEW_ROWS + 1];
 static Mapper_t _mapper;
 static bool _stepKeyWasPressed;
 static bool _runKeyWasPressed;
 static bool _run;
+static char _lastLoadedFileName[512];
 
 int main(int argc, const char* argv[])
 {
   int sdlReturnCode;
 
-  SharedSDL_Initialize(640, 480, "My Nes Emulator Thingy", Initialize, Update, Draw, Event);
+  SharedSDL_Initialize(WINDOW_WIDTH, WINDOW_HEIGHT, "My Nes Emulator Thingy", Initialize, Update, Draw, Event);
   sdlReturnCode = SharedSDL_Start();
 
   return sdlReturnCode;
@@ -59,6 +82,7 @@ static void Initialize()
   NES_Initialize();
   if (INesLoader_Load(romFile, &_mapper))
   {
+    strncpy(_lastLoadedFileName, romFile, sizeof(_lastLoadedFileName));
     bus = NES_GetBus();
     Bus_SetMapper(bus, &_mapper);
   }
@@ -143,7 +167,19 @@ static bool Update(float deltaTime)
 
   instr = InstructionTable_GetInstruction(cpu->Instruction);
 
-  sprintf(_textBuffer,
+  // First row: Meta info
+  const char* firstRowTemplate = "Map: %02X File: %-*s";
+  snprintf(_statusBarBuffer,
+           STATUS_BAR_CHARS_PER_ROW + 1,
+           firstRowTemplate,
+           _mapper.MapperId,
+           STATUS_BAR_CHARS_PER_ROW,
+           _lastLoadedFileName
+           );
+
+  // Second row: CPU status
+  snprintf(&_statusBarBuffer[STATUS_BAR_CHARS_PER_ROW],
+          STATUS_BAR_CHARS_PER_ROW + 1,
           "%04X: %3s %3s A:%02X X:%02X Y:%02X S:%02X C:%04d",
           cpu->InstructionPC,
           instr->Name,
@@ -179,27 +215,24 @@ static bool Update(float deltaTime)
   }
 
   memAddress = 0x6000;
-  for (int i = 0; i < MEM2_WINDOW_SIZE; i++)
+  memset(_memoryViewBuffer, 0, sizeof(_memoryViewBuffer));
+  for (int i = 0; i < MEMORY_VIEW_ROWS; i++)
   {
-    uint8_t memData = Bus_Read(bus, memAddress);
-    if (i == 0)
+    snprintf(_memoryViewBuffer + strlen(_memoryViewBuffer),
+             sizeof(_memoryViewBuffer) - strlen(_memoryViewBuffer),
+             "%04X:",
+             memAddress
+             );
+    for (int j = 0; j < MEMORY_VIEW_COLUMNS; j++)
     {
-      sprintf(_memTextBuffer2[i],
-              "%04X: %02X <",
-              memAddress,
-              memData
-              );
+      uint8_t memData = Bus_Read(bus, memAddress);
+      snprintf(_memoryViewBuffer + strlen(_memoryViewBuffer),
+               sizeof(_memoryViewBuffer) - strlen(_memoryViewBuffer),
+               " %02X",
+               memData
+               );
+      memAddress++;
     }
-    else
-    {
-      sprintf(_memTextBuffer2[i],
-              "%04X: %02X",
-              memAddress,
-              memData
-              );
-    }
-
-    memAddress++;
   }
 
   if (_runKeyWasPressed)
@@ -256,32 +289,51 @@ static bool Update(float deltaTime)
 
 static void Draw(SDL_Surface* surface)
 {
-  SDL_Rect rect;
+  SDL_Rect nesScreenRect;
   uint32_t color;
 
-  rect.w = 100;
-  rect.h = 50;
-  rect.x = 40;
-  rect.y = 40;
+  // Nes screen output
+  nesScreenRect.w = NES_SCREEN_WIDTH * NES_SCREEN_SCALE;
+  nesScreenRect.h = NES_SCREEN_HEIGHT * NES_SCREEN_SCALE;
+  nesScreenRect.x = 0;
+  nesScreenRect.y = STATUS_BAR_HEIGHT;
   color = SDL_MapRGB(surface->format, 0xFF, 0x00, 0x00);
+  SDL_FillRect(surface, &nesScreenRect, color);
 
-  SDL_FillRect(surface, &rect, color);
+  // Status bar
+  Text_DrawStringWrapping(surface, _statusBarBuffer, 0, 0, STATUS_BAR_CHARS_PER_ROW, &_font);
 
-  Text_DrawString(surface, _textBuffer, 0, 0, &_font);
-  Text_DrawString(surface, "Memory view", 0, 16, &_font);
+  // Debug view
+  // Memory view
+  Text_DrawString(surface, "Memory view", nesScreenRect.w, STATUS_BAR_HEIGHT, &_font);
+  Text_DrawStringWrapping(surface,
+                           _memoryViewBuffer,
+                           nesScreenRect.w,
+                           STATUS_BAR_HEIGHT + _font.GlyphHeight,
+                           MEMORY_VIEW_CHARS_PER_ROW,
+                           &_font);
+  // PC memory area
+  Text_DrawString(surface, "Disassembler (WIP)", nesScreenRect.w, STATUS_BAR_HEIGHT + (2 + MEMORY_VIEW_ROWS) * _font.GlyphHeight, &_font);
   for (int i = 0; i < HALF_MEM_WINDOW_SIZE * 2 + 1; i++)
   {
-    Text_DrawString(surface, _memTextBuffer[i], 0, 32 + _font.GlyphHeight * i, &_font);
+    Text_DrawString(surface,
+                    _memTextBuffer[i],
+                    nesScreenRect.w,
+                    STATUS_BAR_HEIGHT + _font.GlyphHeight * (i + 3 + MEMORY_VIEW_ROWS),
+                    &_font);
   }
 
-  for (int i = 0; i < MEM2_WINDOW_SIZE; i++)
-  {
-    Text_DrawString(surface, _memTextBuffer2[i], 300, 32 + _font.GlyphHeight * i, &_font);
-  }
+
+
 
   Text_DrawStringWrapping(surface, _logBuffer, 0, 288, surface->w / _font.GlyphWidth, &_font);
 
+  // Debug: state
   Text_DrawString(surface, _run ? "Running" : "Stopped", 0, surface->h - _font.GlyphHeight, &_font);
+
+
+
+
 }
 
 

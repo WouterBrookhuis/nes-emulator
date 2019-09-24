@@ -105,7 +105,7 @@ int SharedSDL_Start()
     }
 
     SDL_FillRect(windowSurface, NULL,
-                 SDL_MapRGB(windowSurface->format, 0x33, 0x99, 0xFF));
+                 SDL_MapRGB(windowSurface->format, 0x00, 0x00, 0x00));
 
     if (_controlBlock.draw != NULL)
     {
