@@ -94,7 +94,7 @@ static void Initialize()
   NES_TickClock();
   NES_TickUntilCPUComplete();
 
-  Text_LoadFont(&_font, "Resources/monofont.bmp", 16, 16);
+  Text_LoadFont(&_font, "Resources/monofont.bmp", FONT_SIZE, FONT_SIZE);
 }
 
 static void Event(SDL_Event* event)
