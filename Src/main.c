@@ -180,7 +180,7 @@ static bool Update(float deltaTime)
   // Second row: CPU status
   snprintf(&_statusBarBuffer[STATUS_BAR_CHARS_PER_ROW],
           STATUS_BAR_CHARS_PER_ROW + 1,
-          "%04X: %3s %3s A:%02X X:%02X Y:%02X S:%02X C:%04d",
+          "%04X: %3s %3s A:%02X X:%02X Y:%02X S:%02X P:%02X, C:%010d",
           cpu->InstructionPC,
           instr->Name,
           AddressingMode_GetName(instr->AddressingMode),
@@ -188,7 +188,8 @@ static bool Update(float deltaTime)
           cpu->X,
           cpu->Y,
           cpu->S,
-          cpu->CycleCount / 1000
+          cpu->P,
+          cpu->CycleCount
           );
   uint16_t memAddress = cpu->InstructionPC - HALF_MEM_WINDOW_SIZE;
   for (int i = 0; i < HALF_MEM_WINDOW_SIZE * 2 + 1; i++)
