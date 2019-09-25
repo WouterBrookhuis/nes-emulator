@@ -9,23 +9,32 @@
 #include "NES.h"
 #include "CPU.h"
 #include "Bus.h"
+#include "PPU.h"
 
 static int _clockCycleCount;
 static int _cpuClockDivisor;
+static int _ppuClockDivisor;
 static CPU_t _cpu;
 static Bus_t _bus;
+static PPU_t _ppu;
 
 void NES_Initialize(void)
 {
   _cpuClockDivisor = 12;  // NTSC mode
+  _ppuClockDivisor = 4;   // NTSC mode
   _clockCycleCount = 0;
 
   CPU_Initialize(&_cpu);
-  Bus_Initialize(&_bus, &_cpu);
+  PPU_Initialize(&_ppu);
+  Bus_Initialize(&_bus, &_cpu, &_ppu);
 }
 
 void NES_TickClock(void)
 {
+  if (_clockCycleCount % _ppuClockDivisor == 0)
+  {
+    PPU_Tick(&_ppu);
+  }
   if (_clockCycleCount % _cpuClockDivisor == 0)
   {
     CPU_Tick(&_cpu);
@@ -45,6 +54,11 @@ void NES_TickUntilCPUComplete(void)
   {
     NES_TickClock();
   }
+}
+
+PPU_t *NES_GetPPU(void)
+{
+  return &_ppu;
 }
 
 CPU_t *NES_GetCPU(void)

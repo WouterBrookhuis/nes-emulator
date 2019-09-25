@@ -10,16 +10,20 @@
 
 #include <stdint.h>
 
+typedef struct _PPU_t PPU_t;
 typedef struct _CPU_t CPU_t;
 typedef struct _Mapper_t Mapper_t;
 
 typedef struct _Bus_t
 {
   CPU_t *CPU;
+  PPU_t *PPU;
   Mapper_t *Mapper;
 } Bus_t;
 
-void Bus_Initialize(Bus_t *bus, CPU_t *cpu);
+void Bus_TriggerNMI(Bus_t *bus);
+
+void Bus_Initialize(Bus_t *bus, CPU_t *cpu, PPU_t *ppu);
 
 void Bus_SetMapper(Bus_t *bus, Mapper_t *mapper);
 
