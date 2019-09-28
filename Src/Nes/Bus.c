@@ -35,7 +35,7 @@ void Bus_SetMapper(Bus_t *bus, Mapper_t *mapper)
 
 void Bus_TriggerNMI(Bus_t *bus)
 {
-  // TODO: NMI stuff
+  CPU_NMI(bus->CPU);
 }
 
 uint8_t Bus_ReadCPU(Bus_t *bus, uint16_t address)

@@ -33,10 +33,14 @@ typedef struct _CPU_t
   uint8_t S;      // Stack pointer
   uint8_t P;      // Status register
 
+  bool PendingNMI;
+  bool PendingIRQ;
+
 } CPU_t;
 
 void CPU_Initialize(CPU_t *cpu);
 void CPU_Tick(CPU_t *cpu);
 void CPU_Reset(CPU_t *cpu);
+void CPU_NMI(CPU_t *cpu);
 
 #endif /* SRC_NES_CPU_H_ */
