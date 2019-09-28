@@ -173,7 +173,9 @@ void PPU_Tick(PPU_t *ppu)
   // Visible scanlines
   if (ppu->VCount >= 0 && ppu->VCount <= 239)
   {
-
+    // TODO: Pre-render line and visible lines have the same memory accesses, ensure we do that too
+    uint16_t tileAddress = 0x2000 | (ppu->V & 0x0FFF);
+    uint16_t attributeAddress = 0x23C0 | (ppu->V & 0x0C00) | ((ppu->V >> 4) & 0x0038) | ((ppu->V >> 2) & 0x0007);
   }
   // Post render scanline + 1
   if (ppu->VCount == 241)

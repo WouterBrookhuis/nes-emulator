@@ -41,9 +41,16 @@ typedef struct _PPU_t
   bool IsEvenFrame;
 
   // VRAM Address Registers
-  uint16_t V;
-  uint16_t T;
-  uint8_t X;
+  // V and T have the same internal structure
+  //  14  13  12  11  10  9   8   7   6   5   4   3   2   1   0
+  //  y   y   y   N   N   Y   Y   Y   Y   Y   X   X   X   X   X
+  // y = Fine Y scroll
+  // N = Nametable
+  // Y = Coarse Y scroll
+  // X = Coarse X scroll
+  uint16_t V;       // The VRAM address that is actually used
+  uint16_t T;       // A temporary VRAM address, most CPU actions modify this one
+  uint8_t X;        // Fine X offset, 3 bits, 1 MSB = 1 pixel
 
 } PPU_t;
 

@@ -13,7 +13,19 @@
 uint8_t Mapper001_Read(Mapper_t *mapper, uint16_t address)
 {
   Mapper001Data_t* customData = (Mapper001Data_t*)mapper->CustomData;
-  if (address >= 0x6000 && address <= 0x7FFF)
+  if (address >= 0x0000 && address <= 0x1FFF)
+  {
+    // PPU char rom/ram
+    // Could be single 8k or two 4k banks
+//    uint8_t bankMode = customData->ControlRegister & 0x10;
+//    uint16_t externalBankBaseAddress;
+//    uint32_t internalBankBaseAddress;
+//
+//    uint32_t index = address - externalBankBaseAddress + internalBankBaseAddress;
+    // TODO: Implement char banks
+    return mapper->Memory[0];
+  }
+  else if (address >= 0x6000 && address <= 0x7FFF)
   {
     // Optional RAM bank, we always provide it
     return customData->PrgRam8k[address - 0x6000];
@@ -136,7 +148,7 @@ void Mapper001_Initialize(Mapper_t *mapper, INesHeader_t *header)
   memset(mapper, 0, sizeof(*mapper));
 
   mapper->MapperId = 0x01;
-  mapper->MemorySize = header->PrgRomSize * SIZE_16KB;
+  mapper->MemorySize = header->PrgRomSize * SIZE_16KB + header->ChrRomSize * SIZE_8KB;
   // TODO: Check for malloc failure
   mapper->Memory = malloc((size_t)mapper->MemorySize);
   mapper->NumPrgBanks = header->PrgRomSize;
