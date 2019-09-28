@@ -49,6 +49,11 @@ static inline void SetFlag(uint8_t *P, uint8_t flag, bool set)
   }
 }
 
+static inline bool IsRendering(PPU_t *ppu)
+{
+  return IsFlagSet(&ppu->Mask, MASKFLAG_BACKGROUND) || IsFlagSet(&ppu->Mask, MASKFLAG_SPRITES);
+}
+
 void PPU_Initialize(PPU_t *ppu)
 {
   memset(ppu, 0, sizeof(*ppu));
@@ -58,8 +63,9 @@ void PPU_Initialize(PPU_t *ppu)
   ppu->Status = 0xA0;
   ppu->OAMAddress = 0x00;
   ppu->Scroll = 0x00;
-  ppu->Address = 0x00;
   ppu->Data = 0x00;
+
+  ppu->VCount = -1;
 }
 
 void PPU_Reset(PPU_t *ppu)
@@ -71,10 +77,135 @@ void PPU_Reset(PPU_t *ppu)
   ppu->Data = 0x00;
 }
 
+static void IncrementCoarseX(PPU_t *ppu)
+{
+  if ((ppu->V & 0x001F) == 31)
+  {
+    // Coarse X is 31, reset it to 0 and toggle H nametable
+    ppu->V &= ~0x001F;
+    ppu->V ^= 0x0400;
+  }
+  else
+  {
+    // Increment coarse X
+    ppu->V++;
+  }
+}
+
+static void IncrementY(PPU_t *ppu)
+{
+  if ((ppu->V & 0x7000) != 0x7000)
+  {
+    // Increment fine Y as long as it isn't 7 yet
+    ppu->V += 0x1000;
+  }
+  else
+  {
+    // Reset fine Y to 0
+    ppu->V &= ~0x7000;
+    int y = (ppu->V & 0x03E0) >> 5;
+    if (y == 29)
+    {
+      // Reset coarse Y and toggle V nametable
+      y = 0;
+      ppu->V ^= 0x0800;
+    }
+    else if (y == 31)
+    {
+      // Only reset coarse Y
+      y = 0;
+    }
+    else
+    {
+      // Increment coarse Y
+      y++;
+    }
+    // Write back Y to V
+    ppu->V = (ppu->V & ~0x03E0) | (y << 5);
+  }
+}
+
 void PPU_Tick(PPU_t *ppu)
 {
+  // Increment cycles
   ppu->CycleCount++;
   ppu->CyclesSinceReset++;
+
+  // Do PPU things
+  // Address increment things
+  if (IsRendering(ppu))
+  {
+    if (ppu->HCount == 256)
+    {
+      IncrementY(ppu);
+    }
+    if (ppu->HCount == 257)
+    {
+      // Copy horizontal position from T to V
+      ppu->V = (ppu->T & 0x041F) | (ppu->V & ~0x041F);
+    }
+    if (ppu->VCount == -1 && ppu->HCount >= 280 && ppu->HCount <= 304)
+    {
+      // Copy vertical bits from T to V
+      ppu->V = (ppu->T & ~0x041F) | (ppu->V & 0x041F);
+    }
+    if (ppu->HCount != 0 && (ppu->HCount <= 256 || ppu->HCount >= 328))
+    {
+      // Increment horizontal of V every 8 dots (except at dot 0)
+      if (ppu->HCount % 8 == 0)
+      {
+        IncrementCoarseX(ppu);
+      }
+    }
+  }
+
+  // Pre-render scanline
+  if (ppu->VCount == -1)
+  {
+    if (ppu->HCount == 1)
+    {
+      // Some flags are cleared here
+      SetFlag(&ppu->Status, STATFLAG_VBLANK, false);
+      SetFlag(&ppu->Status, STATFLAG_SPRITE_0_HIT, false);
+      SetFlag(&ppu->Status, STATFLAG_SPRITE_OVERFLOW, false);
+    }
+  }
+  // Visible scanlines
+  if (ppu->VCount >= 0 && ppu->VCount <= 239)
+  {
+
+  }
+  // Post render scanline + 1
+  if (ppu->VCount == 241)
+  {
+    if (ppu->HCount == 1)
+    {
+      // Set VBLANK flag here
+      SetFlag(&ppu->Status, STATFLAG_VBLANK, true);
+      if (IsFlagSet(&ppu->Ctrl, CTRLFLAG_VBLANK_NMI))
+      {
+        // Trigger the NMI here as well
+        Bus_TriggerNMI(ppu->Bus);
+      }
+    }
+  }
+
+  // Calculate next scanline position
+  ppu->HCount++;
+  // 340 is the last cycle, so go to the next line when we hit 341
+  // However, on uneven frames with rendering disabled we skip the last cycle of
+  // the pre-render scanline (-1 here)
+  if (ppu->HCount == 341 ||
+      (!ppu->IsEvenFrame && IsRendering(ppu) && ppu->HCount == 340 && ppu->VCount == -1))
+  {
+    ppu->HCount = 0;
+    ppu->VCount++;
+    if (ppu->VCount == 261)
+    {
+      ppu->VCount = -1;
+      ppu->IsEvenFrame = !ppu->IsEvenFrame;
+    }
+  }
 }
 
 uint8_t PPU_Read(PPU_t *ppu, uint16_t address)
@@ -106,10 +237,10 @@ uint8_t PPU_Read(PPU_t *ppu, uint16_t address)
     ppu->LatchedData = result;
     return result;
   case 0x0003:
-    // OMAAddress
+    // OAMAddress
     return ppu->LatchedData;
   case 0x0004:
-    // OMAData
+    // OAMData
     return ppu->OAMData;
     break;
   case 0x0005:
@@ -121,6 +252,7 @@ uint8_t PPU_Read(PPU_t *ppu, uint16_t address)
   case 0x0007:
     // Data
     // TODO: Data read
+    ppu->V += IsFlagSet(&ppu->Ctrl, CTRLFLAG_VRAM_INCREMENT) ? 32 : 1;
     break;
   default:
     // TODO: Error
@@ -148,6 +280,10 @@ void PPU_Write(PPU_t *ppu, uint16_t address, uint8_t data)
   case 0x0000:
     // Ctrl
     ppu->Ctrl = data;
+    // Update temp register with nametable info
+    // Bits 10-11 are the ones we need
+    ppu->T = (ppu->T & ~0x0C00) | ((data << 10) & 0x0C00);
+
     // If we are in VBLANK and the vblank status flag is still set, then enabling the NMI
     // here will instantly trigger it
     if (IsFlagSet(&ppu->Status, STATFLAG_VBLANK) && IsFlagSet(&ppu->Ctrl, CTRLFLAG_VBLANK_NMI))
@@ -163,40 +299,60 @@ void PPU_Write(PPU_t *ppu, uint16_t address, uint8_t data)
     // Status
     break;
   case 0x0003:
-    // OMAAddress
+    // OAMAddress
     ppu->OAMAddress = data;
     break;
   case 0x0004:
-    // OMAData
+    // OAMData
     // TODO: Implement glitches
     break;
   case 0x0005:
     // Scroll
-    // TODO: Scroll write
-    if (ppu->AddressLatch == 1)
+    // TODO: Write while rendering corruption?
+    if (ppu->AddressLatch == 0)
     {
-      ppu->AddressLatch = 0;
+      // Lower 3 bits are for X
+      ppu->X = data & 0x07;
+      // High 5 bits are for 0-4 of T
+      ppu->T = ((data >> 3) & 0x001F) | (ppu->T & ~0x001F);
+
+      ppu->AddressLatch = 1;
     }
     else
     {
-      ppu->AddressLatch = 1;
+      // Lowest 3 bits need to go to 12-14 of T
+      ppu->T = ((data << 12) & 0x7000) | (ppu->T & ~0x7000);
+      // High 5 bits need to go to 5-9 of T
+      ppu->T = ((data << 2) & 0x03E0) | (ppu->T & ~0x03E0);
+
+      ppu->AddressLatch = 0;
     }
     break;
   case 0x0006:
     // Address
-    // TODO: Addr write
-    if (ppu->AddressLatch == 1)
+    // TODO: Check weirdness for Addr
+    if (ppu->AddressLatch == 0)
     {
-      ppu->AddressLatch = 0;
+      // Only lower 6 bits are needed, they go to 8-13 of T
+      // Bit 15 of T also gets cleared
+      ppu->T = ((data << 8) & 0x3F00) | (ppu->T & 0x00FF);
+
+      ppu->AddressLatch = 1;
     }
     else
     {
-      ppu->AddressLatch = 1;
+      // Set low byte of T to data
+      ppu->T = (data & 0x00FF) | (ppu->T & 0xFF00);
+      // V gets updated with contents of T
+      ppu->V = ppu->T;
+
+      ppu->AddressLatch = 0;
     }
     break;
   case 0x0007:
     // Data
-    // TODO: Data write
+    // TODO: Weird glitches for writing to 0x2007 during rendering
+    ppu->V += IsFlagSet(&ppu->Ctrl, CTRLFLAG_VRAM_INCREMENT) ? 32 : 1;
     break;
   default:
     // TODO: Error

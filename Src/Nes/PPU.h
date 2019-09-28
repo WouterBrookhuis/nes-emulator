@@ -26,7 +26,7 @@ typedef struct _PPU_t
   uint8_t OAMAddress;
   uint8_t OAMData;
   uint8_t Scroll;
-  uint8_t Address;
+  //uint8_t Address;
   uint8_t Data;
   uint8_t OAMDma;
 
@@ -34,6 +34,17 @@ typedef struct _PPU_t
   uint8_t AddressLatch;
   uint8_t DataBuffer;
   uint8_t LatchedData;
+
+  // Frame lines
+  int VCount;
+  int HCount;
+  bool IsEvenFrame;
+
+  // VRAM Address Registers
+  uint16_t V;
+  uint16_t T;
+  uint8_t X;
+
 } PPU_t;
 
 void PPU_Initialize(PPU_t *ppu);
