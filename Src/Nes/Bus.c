@@ -17,6 +17,7 @@
 uint8_t _testRam[UINT16_MAX];
 uint8_t _palette[256];
 uint8_t _vram[2048];
+uint8_t _pattern[8192];
 
 static uint8_t ReadNametableDefault(Bus_t *bus, uint16_t address);
 
@@ -117,6 +118,11 @@ uint8_t Bus_ReadFromPPU(Bus_t *bus, uint16_t address)
   {
     // Handled by mapper
   }
+  else if (address <= 0x1FFF)
+  {
+    // Pattern table
+    data = _pattern[address];
+  }
   else if (address >= 0x2000 && address <= 0x3EFF)
   {
     // Default nametable implementation
@@ -150,6 +156,11 @@ void Bus_WriteFromPPU(Bus_t *bus, uint16_t address, uint8_t data)
   {
     // Handled by mapper
   }
+  else if (address <= 0x1FFF)
+  {
+    // Pattern table
+    _pattern[address] = data;
+  }
   else if (address >= 0x2000 && address <= 0x3EFF)
   {
     // Default nametable implementation
@@ -175,94 +186,95 @@ void Bus_WriteFromPPU(Bus_t *bus, uint16_t address, uint8_t data)
 
 static uint8_t ReadNametableDefault(Bus_t *bus, uint16_t address)
 {
-  if (address >= 0x3000)
-  {
-    address -= 0x1000;
-  }
+  address &= 0x0FFF;
+
   if (bus->Mapper->Mirror == MIRROR_MODE_HORIZONTAL)
   {
-    if (address >= 0x2000 && address <= 0x23FF)
+    if (address >= 0x0000 && address <= 0x03FF)
     {
       return _vram[address & 0x3FF];
     }
-    else if (address >= 0x2400 && address <= 0x27FF)
+    else if (address >= 0x0400 && address <= 0x07FF)
     {
       return _vram[address & 0x3FF];
     }
-    else if (address >= 0x2800 && address <= 0x2BFF)
+    else if (address >= 0x0800 && address <= 0x0BFF)
     {
       return _vram[(address & 0x3FF) + 0x400];
     }
-    else if (address >= 0x2C00 && address <= 0x2FFF)
+    else if (address >= 0x0C00 && address <= 0x0FFF)
     {
       return _vram[(address & 0x3FF) + 0x400];
     }
   }
   else if (bus->Mapper->Mirror == MIRROR_MODE_VERTICAL)
   {
-    if (address >= 0x2000 && address <= 0x23FF)
+    if (address >= 0x0000 && address <= 0x03FF)
     {
       return _vram[address & 0x3FF];
     }
-    else if (address >= 0x2400 && address <= 0x27FF)
+    else if (address >= 0x0400 && address <= 0x07FF)
     {
       return _vram[(address & 0x3FF) + 0x400];
     }
-    else if (address >= 0x2800 && address <= 0x2BFF)
-    {
-      return _vram[(address & 0x3FF) + 0x400];
-    }
-    else if (address >= 0x2C00 && address <= 0x2FFF)
+    else if (address >= 0x0800 && address <= 0x0BFF)
     {
       return _vram[address & 0x3FF];
+    }
+    else if (address >= 0x0C00 && address <= 0x0FFF)
+    {
+      return _vram[(address & 0x3FF) + 0x400];
     }
   }
-  // TODO: Log error
+
+  LogError("Unsupported mirroring mode %d", bus->Mapper->Mirror);
   return 0x55;
 }
 
 static void WriteNametableDefault(Bus_t *bus, uint16_t address, uint8_t data)
 {
-  if (address >= 0x3000)
-  {
-    address -= 0x1000;
-  }
+  address &= 0x0FFF;
+
   if (bus->Mapper->Mirror == MIRROR_MODE_HORIZONTAL)
   {
-    if (address >= 0x2000 && address <= 0x23FF)
+    if (address >= 0x0000 && address <= 0x03FF)
     {
       _vram[address & 0x3FF] = data;
     }
-    else if (address >= 0x2400 && address <= 0x27FF)
+    else if (address >= 0x0400 && address <= 0x07FF)
     {
       _vram[address & 0x3FF] = data;
     }
-    else if (address >= 0x2800 && address <= 0x2BFF)
+    else if (address >= 0x0800 && address <= 0x0BFF)
     {
       _vram[(address & 0x3FF) + 0x400] = data;
     }
-    else if (address >= 0x2C00 && address <= 0x2FFF)
+    else if (address >= 0x0C00 && address <= 0x0FFF)
     {
       _vram[(address & 0x3FF) + 0x400] = data;
     }
   }
   else if (bus->Mapper->Mirror == MIRROR_MODE_VERTICAL)
   {
-    if (address >= 0x2000 && address <= 0x23FF)
+    if (address >= 0x0000 && address <= 0x03FF)
     {
       _vram[address & 0x3FF] = data;
     }
-    else if (address >= 0x2400 && address <= 0x27FF)
+    else if (address >= 0x0400 && address <= 0x07FF)
     {
       _vram[(address & 0x3FF) + 0x400] = data;
     }
-    else if (address >= 0x2800 && address <= 0x2BFF)
-    {
-      _vram[(address & 0x3FF) + 0x400] = data;
-    }
-    else if (address >= 0x2C00 && address <= 0x2FFF)
+    else if (address >= 0x0800 && address <= 0x0BFF)
     {
       _vram[address & 0x3FF] = data;
     }
+    else if (address >= 0x0C00 && address <= 0x0FFF)
+    {
+      _vram[(address & 0x3FF) + 0x400] = data;
+    }
+  }
+  else
+  {
+    LogError("Unsupported mirroring mode %d", bus->Mapper->Mirror);
   }
 }

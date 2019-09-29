@@ -370,6 +370,7 @@ uint8_t PPU_ReadFromCpu(PPU_t *ppu, uint16_t address)
     {
       result = ppu->DataBuffer;
       // TODO: DataBuffer should be filled with nametable data 'underneath' palette
+      ppu->DataBuffer = Bus_ReadFromPPU(ppu->Bus, ppu->V - 0x1000);
     }
     // The vram address always gets incremented on reading
     ppu->V += IsFlagSet(&ppu->Ctrl, CTRLFLAG_VRAM_INCREMENT) ? 32 : 1;
