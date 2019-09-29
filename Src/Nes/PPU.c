@@ -82,10 +82,10 @@ static void RenderPixel(PPU_t *ppu, int x, int y, uint8_t pixel, uint8_t palette
   Palette_GetRGB(colorPaletteIndex, &r, &g, &b);
   *(uint32_t*)pixelPtr = SDL_MapRGB(_renderSurface->format, r, g, b);
 
-  if (x % 8 == 0 || y % 8 == 0)
-  {
-    *(uint32_t*)pixelPtr = SDL_MapRGB(_renderSurface->format, 255, 0, 0);
-  }
+//  if (x % 8 == 0 || y % 8 == 0)
+//  {
+//    *(uint32_t*)pixelPtr = SDL_MapRGB(_renderSurface->format, 255, 0, 0);
+//  }
 }
 
 void PPU_SetRenderSurface(SDL_Surface *surface)
@@ -213,12 +213,20 @@ void PPU_Tick(PPU_t *ppu)
   if (ppu->VCount >= -1 && ppu->VCount <= 239)
   {
     // Memory accessing to get data
-    if ((ppu->HCount >= 1 && ppu->HCount <= 256) || (ppu->HCount >= 321 && ppu->HCount <= 336))
+    if ((ppu->HCount >= 1 && ppu->HCount <= 257) || (ppu->HCount >= 321 && ppu->HCount <= 337))
     {
       uint8_t pixelCycle = ppu->HCount % 8;
 
       if (pixelCycle == 1)
       {
+        // Reload shift registers, but not on tick 1 for this scanline
+        if (ppu->HCount > 1)
+        {
+          ppu->SRPatternLow =     (ppu->SRPatternLow & 0xFF00)    | (ppu->NextBgTileLow);
+          ppu->SRPatternHigh =    (ppu->SRPatternHigh & 0xFF00)   | (ppu->NextBgTileHigh);
+          ppu->SRAttributeLow =   (ppu->SRAttributeLow & 0xFF00)  | (ppu->NextBgAttribute & 0x01 ? 0xFF : 0x00);
+          ppu->SRAttributeHigh =  (ppu->SRAttributeHigh & 0xFF00) | (ppu->NextBgAttribute & 0x10 ? 0xFF : 0x00);
+        }
         // Fetch NT
         ppu->NextBgTileId = Bus_ReadFromPPU(ppu->Bus, 0x2000 | (ppu->V & 0x0FFF));
       }
@@ -246,26 +254,26 @@ void PPU_Tick(PPU_t *ppu)
       {
         // Fetch low BG tile byte
         ppu->NextBgTileLow = Bus_ReadFromPPU(ppu->Bus,
-                                         ((ppu->Ctrl & CTRLFLAG_BACKGROUND_ADDRESS) << 12)
-                                         + ((uint16_t)ppu->NextBgTileId << 4)
-                                         + ((ppu->V >> 12) & 0x07) + 0);
+                                             (IsFlagSet(&ppu->Ctrl, CTRLFLAG_BACKGROUND_ADDRESS) ? 0x1000 : 0x000)
+                                             + ((uint16_t)ppu->NextBgTileId << 4)
+                                             + ((ppu->V >> 12) & 0x07) + 0);
       }
       else if (pixelCycle == 7)
       {
         // Fetch high BG tile byte
         ppu->NextBgTileHigh = Bus_ReadFromPPU(ppu->Bus,
-                                          ((ppu->Ctrl & CTRLFLAG_BACKGROUND_ADDRESS) << 12)
-                                          + ((uint16_t)ppu->NextBgTileId << 4)
-                                          + ((ppu->V >> 12) & 0x07) + 8);
+                                              (IsFlagSet(&ppu->Ctrl, CTRLFLAG_BACKGROUND_ADDRESS) ? 0x1000 : 0x000)
+                                              + ((uint16_t)ppu->NextBgTileId << 4)
+                                              + ((ppu->V >> 12) & 0x07) + 8);
       }
-      else if (pixelCycle == 0)
-      {
-        // Update shift registers?
-        ppu->SRPatternLow =     (ppu->SRPatternLow & 0xFF00)    | (ppu->NextBgTileLow);
-        ppu->SRPatternHigh =    (ppu->SRPatternHigh & 0xFF00)   | (ppu->NextBgTileHigh);
-        ppu->SRAttributeLow =   (ppu->SRAttributeLow & 0xFF00)  | (ppu->NextBgAttribute & 0x01 ? 0xFF : 0x00);
-        ppu->SRAttributeHigh =  (ppu->SRAttributeHigh & 0xFF00) | (ppu->NextBgAttribute & 0x10 ? 0xFF : 0x00);
-      }
+    }
+    if ((ppu->HCount >= 2 && ppu->HCount <= 257) || (ppu->HCount >= 322 && ppu->HCount <= 337))
+    {
+      // Shift the shift registers
+      ppu->SRAttributeHigh <<= 1;
+      ppu->SRAttributeLow <<= 1;
+      ppu->SRPatternHigh <<= 1;
+      ppu->SRPatternLow <<= 1;
     }
   }
   // Post render scanline + 1
@@ -293,12 +301,6 @@ void PPU_Tick(PPU_t *ppu)
                       (((ppu->SRAttributeHigh &  pixelBit) > 0) << 1);
     RenderPixel(ppu, ppu->HCount, ppu->VCount, pixel, palette);
   }
-
-  // Shift the shift registers
-  ppu->SRAttributeHigh <<= 1;
-  ppu->SRAttributeLow <<= 1;
-  ppu->SRPatternHigh <<= 1;
-  ppu->SRPatternLow <<= 1;
 
   // Calculate next scanline position
   ppu->HCount++;
