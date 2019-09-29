@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <SDL2/SDL.h>
 
 typedef struct _Bus_t Bus_t;
 
@@ -59,5 +60,5 @@ void PPU_Tick(PPU_t *ppu);
 void PPU_Reset(PPU_t *ppu);
 uint8_t PPU_Read(PPU_t *ppu, uint16_t address);
 void PPU_Write(PPU_t *ppu, uint16_t address, uint8_t data);
-
+void PPU_SetRenderSurface(SDL_Surface *surface);
 #endif /* SRC_NES_PPU_H_ */

@@ -16,6 +16,7 @@
 #include "Nes/Mapper.h"
 #include "Nes/InstructionTable.h"
 #include "Nes/Bus.h"
+#include "Nes/Palette.h"
 
 static void Initialize(void);
 
@@ -58,8 +59,12 @@ static char _memoryViewBuffer[MEMORY_VIEW_CHARS_PER_ROW * MEMORY_VIEW_ROWS + 1];
 static Mapper_t _mapper;
 static bool _stepKeyWasPressed;
 static bool _runKeyWasPressed;
+static bool _statusKeyWasPressed;
 static bool _run;
+static bool _showCpu;
 static char _lastLoadedFileName[512];
+static SDL_Surface *_ppuRenderSurface;
+
 
 int main(int argc, const char* argv[])
 {
@@ -77,6 +82,7 @@ static void Initialize()
   //const char * romFile = "Resources/official_only.nes";
   const char * romFile = "Resources/nestest.nes";
   //const char * romFile = "Resources/rom_singles/01-basics.nes";
+  const char * paletteFile = "Resources/ntscpalette.pal";
   Bus_t *bus;
   CPU_t *cpu;
   NES_Initialize();
@@ -86,6 +92,11 @@ static void Initialize()
     bus = NES_GetBus();
     Bus_SetMapper(bus, &_mapper);
   }
+
+  Palette_LoadFrom(paletteFile);
+
+  _ppuRenderSurface = SDL_CreateRGBSurfaceWithFormat(0, NES_SCREEN_WIDTH, NES_SCREEN_HEIGHT, 32, SDL_PIXELFORMAT_RGBA32);
+  PPU_SetRenderSurface(_ppuRenderSurface);
 
   // Run first instruction
   cpu = NES_GetCPU();
@@ -108,6 +119,10 @@ static void Event(SDL_Event* event)
     else if (event->key.keysym.sym == SDLK_r)
     {
       _runKeyWasPressed = true;
+    }
+    else if (event->key.keysym.sym == SDLK_s)
+    {
+      _statusKeyWasPressed = true;
     }
   }
 }
@@ -179,29 +194,43 @@ static bool Update(float deltaTime)
            _lastLoadedFileName
            );
 
+  if (_statusKeyWasPressed)
+  {
+    _statusKeyWasPressed = false;
+    _showCpu = !_showCpu;
+  }
+
   // Second row: CPU status
-//  snprintf(&_statusBarBuffer[STATUS_BAR_CHARS_PER_ROW],
-//          STATUS_BAR_CHARS_PER_ROW + 1,
-//          "%04X: %3s %3s A:%02X X:%02X Y:%02X S:%02X P:%02X, C:%010d",
-//          cpu->InstructionPC,
-//          instr->Name,
-//          AddressingMode_GetName(instr->AddressingMode),
-//          cpu->A,
-//          cpu->X,
-//          cpu->Y,
-//          cpu->S,
-//          cpu->P,
-//          cpu->CycleCount
-//          );
-  // Second row: PPU status
-  snprintf(&_statusBarBuffer[STATUS_BAR_CHARS_PER_ROW],
-          STATUS_BAR_CHARS_PER_ROW + 1,
-          "H:%03d V:%03d CTRL:%02X STAT:%02X",
-          ppu->HCount,
-          ppu->VCount,
-          ppu->Ctrl,
-          ppu->Status
-          );
+  if (_showCpu)
+  {
+    snprintf(&_statusBarBuffer[STATUS_BAR_CHARS_PER_ROW],
+            STATUS_BAR_CHARS_PER_ROW + 1,
+            "%04X: %3s %3s A:%02X X:%02X Y:%02X S:%02X P:%02X, C:%010d",
+            cpu->InstructionPC,
+            instr->Name,
+            AddressingMode_GetName(instr->AddressingMode),
+            cpu->A,
+            cpu->X,
+            cpu->Y,
+            cpu->S,
+            cpu->P,
+            cpu->CycleCount
+            );
+  }
+  else
+  {
+    // Second row: PPU status
+    snprintf(&_statusBarBuffer[STATUS_BAR_CHARS_PER_ROW],
+            STATUS_BAR_CHARS_PER_ROW + 1,
+            "H:%03d V:%03d CTRL:%02X STAT:%02X",
+            ppu->HCount,
+            ppu->VCount,
+            ppu->Ctrl,
+            ppu->Status
+            );
+  }
+
+
   uint16_t memAddress = cpu->InstructionPC - HALF_MEM_WINDOW_SIZE;
   for (int i = 0; i < HALF_MEM_WINDOW_SIZE * 2 + 1; i++)
   {
@@ -301,16 +330,22 @@ static bool Update(float deltaTime)
 
 static void Draw(SDL_Surface* surface)
 {
+  SDL_Rect nesInternalRect;
   SDL_Rect nesScreenRect;
   uint32_t color;
 
   // Nes screen output
+  nesInternalRect.w = _ppuRenderSurface->w;
+  nesInternalRect.h = _ppuRenderSurface->h;
+  nesInternalRect.x = 0;
+  nesInternalRect.y = 0;
   nesScreenRect.w = NES_SCREEN_WIDTH * NES_SCREEN_SCALE;
   nesScreenRect.h = NES_SCREEN_HEIGHT * NES_SCREEN_SCALE;
   nesScreenRect.x = 0;
   nesScreenRect.y = STATUS_BAR_HEIGHT;
-  color = SDL_MapRGB(surface->format, 0xFF, 0x00, 0x00);
-  SDL_FillRect(surface, &nesScreenRect, color);
+  //color = SDL_MapRGB(surface->format, 0xFF, 0x00, 0x00);
+  //SDL_FillRect(surface, &nesScreenRect, color);
+  SDL_BlitScaled(_ppuRenderSurface, &nesInternalRect, surface, &nesScreenRect);
 
   // Status bar
   Text_DrawStringWrapping(surface, _statusBarBuffer, 0, 0, STATUS_BAR_CHARS_PER_ROW, &_font);

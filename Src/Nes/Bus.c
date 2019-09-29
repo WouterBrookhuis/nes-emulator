@@ -31,6 +31,7 @@ void Bus_Initialize(Bus_t *bus, CPU_t *cpu, PPU_t *ppu)
 void Bus_SetMapper(Bus_t *bus, Mapper_t *mapper)
 {
   bus->Mapper = mapper;
+  mapper->Bus = bus;
 }
 
 void Bus_TriggerNMI(Bus_t *bus)
@@ -96,6 +97,11 @@ void Bus_WriteCPU(Bus_t *bus, uint16_t address, uint8_t data)
 
 uint8_t Bus_ReadPPU(Bus_t *bus, uint16_t address)
 {
+  if (address > 0x3FFF)
+  {
+    LogError("Invalid address for PPU read: 0x%04X", address);
+    return 0x00;
+  }
   if (address >= 0x3F00 && address <= 0x3FFF)
   {
     return _palette[address & 0x00FF];
@@ -111,6 +117,11 @@ uint8_t Bus_ReadPPU(Bus_t *bus, uint16_t address)
 
 void Bus_WritePPU(Bus_t *bus, uint16_t address, uint8_t data)
 {
+  if (address > 0x3FFF)
+  {
+    LogError("Invalid address for PPU write: 0x%04X", address);
+    return;
+  }
   if (address >= 0x3F00 && address <= 0x3FFF)
   {
     _palette[address & 0x00FF] = data;

@@ -7,7 +7,9 @@
 
 #include "PPU.h"
 #include "Bus.h"
+#include "Palette.h"
 #include <string.h>
+#include <SDL2/SDL.h>
 
 #define CTRLFLAG_NAMETABLE_MASK       0x03
 #define CTRLFLAG_VRAM_INCREMENT       0x04
@@ -32,6 +34,8 @@
 #define STATFLAG_VBLANK               0x80
 
 
+static SDL_Surface *_renderSurface;
+
 static inline bool IsFlagSet(const uint8_t *P, uint8_t flag)
 {
   return ((*P) & flag) > 0;
@@ -52,6 +56,33 @@ static inline void SetFlag(uint8_t *P, uint8_t flag, bool set)
 static inline bool IsRendering(PPU_t *ppu)
 {
   return IsFlagSet(&ppu->Mask, MASKFLAG_BACKGROUND) || IsFlagSet(&ppu->Mask, MASKFLAG_SPRITES);
+}
+
+static void RenderPixel(int x, int y, uint8_t paletteIndex)
+{
+  if (_renderSurface == NULL)
+  {
+    return;
+  }
+
+  if (x < 0 || x >= _renderSurface->w || y < 0 || y >= _renderSurface->h)
+  {
+    return;
+  }
+
+  uint8_t r;
+  uint8_t g;
+  uint8_t b;
+  uint8_t *pixel = (uint8_t*)_renderSurface->pixels +
+                    _renderSurface->w * _renderSurface->format->BytesPerPixel * y +
+                    _renderSurface->format->BytesPerPixel * x;
+  Palette_GetRGB(paletteIndex, &r, &g, &b);
+  *(uint32_t*)pixel = SDL_MapRGB(_renderSurface->format, r, g, b);
+}
+
+void PPU_SetRenderSurface(SDL_Surface *surface)
+{
+  _renderSurface = surface;
 }
 
 void PPU_Initialize(PPU_t *ppu)
@@ -174,8 +205,33 @@ void PPU_Tick(PPU_t *ppu)
   if (ppu->VCount >= 0 && ppu->VCount <= 239)
   {
     // TODO: Pre-render line and visible lines have the same memory accesses, ensure we do that too
-    uint16_t tileAddress = 0x2000 | (ppu->V & 0x0FFF);
-    uint16_t attributeAddress = 0x23C0 | (ppu->V & 0x0C00) | ((ppu->V >> 4) & 0x0038) | ((ppu->V >> 2) & 0x0007);
+
+    if (ppu->HCount >= 1 && ppu->HCount <= 256)
+    {
+      uint16_t tileAddress = 0x2000 | (ppu->V & 0x0FFF);
+      uint16_t attributeAddress = 0x23C0 | (ppu->V & 0x0C00)
+          | ((ppu->V >> 4) & 0x0038) | ((ppu->V >> 2) & 0x0007);
+      uint8_t pixelCycle = ppu->HCount % 8;
+
+      if (pixelCycle == 1)
+      {
+        // Fetch NT
+      }
+      else if (pixelCycle == 3)
+      {
+        // Fetch AT
+      }
+      else if (pixelCycle == 5)
+      {
+        // Fetch low BG tile byte
+      }
+      else if (pixelCycle == 7)
+      {
+        // Fetch high BG tile byte
+      }
+      // TODO: Render properly
+      RenderPixel(ppu->HCount, ppu->VCount, ppu->HCount % 0x40);
+    }
   }
   // Post render scanline + 1
   if (ppu->VCount == 241)
@@ -231,7 +287,7 @@ uint8_t PPU_Read(PPU_t *ppu, uint16_t address)
     return ppu->LatchedData;
   case 0x0002:
     // Status
-    result = (ppu->Status & STATFLAG_GARBAGE_MASK) | ppu->LatchedData;
+    result = (ppu->Status & ~STATFLAG_GARBAGE_MASK) | ppu->LatchedData;
     // Reading causes the address latch and the vblank flag to reset
     SetFlag(&ppu->Status, STATFLAG_VBLANK, false);
     ppu->AddressLatch = 0;
@@ -354,6 +410,7 @@ void PPU_Write(PPU_t *ppu, uint16_t address, uint8_t data)
   case 0x0007:
     // Data
     // TODO: Weird glitches for writing to 0x2007 during rendering
+    Bus_WritePPU(ppu->Bus, ppu->V, data);
     ppu->V += IsFlagSet(&ppu->Ctrl, CTRLFLAG_VRAM_INCREMENT) ? 32 : 1;
     break;
   default:
