@@ -53,6 +53,17 @@ typedef struct _PPU_t
   uint16_t T;       // A temporary VRAM address, most CPU actions modify this one
   uint8_t X;        // Fine X offset, 3 bits, 1 MSB = 1 pixel
 
+  // Rendering shift registers
+  uint16_t SRPatternHigh;   // High bit of pattern
+  uint16_t SRPatternLow;    // Low bit of pattern
+  uint8_t SRAttributeHigh;  // High bit of attribute
+  uint8_t SRAttributeLow;   // Low bit of attribute
+
+  uint8_t NextBgTileId;
+  uint8_t NextBgAttribute;
+  uint8_t NextBgTileLow;
+  uint8_t NextBgTileHigh;
+
 } PPU_t;
 
 void PPU_Initialize(PPU_t *ppu);

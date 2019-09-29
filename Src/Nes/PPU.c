@@ -10,6 +10,7 @@
 #include "Palette.h"
 #include <string.h>
 #include <SDL2/SDL.h>
+#include "log.h"
 
 #define CTRLFLAG_NAMETABLE_MASK       0x03
 #define CTRLFLAG_VRAM_INCREMENT       0x04
@@ -201,36 +202,68 @@ void PPU_Tick(PPU_t *ppu)
       SetFlag(&ppu->Status, STATFLAG_SPRITE_OVERFLOW, false);
     }
   }
-  // Visible scanlines
-  if (ppu->VCount >= 0 && ppu->VCount <= 239)
+  // Visible scanlines and pre-render scanline
+  if (ppu->VCount >= -1 && ppu->VCount <= 239)
   {
-    // TODO: Pre-render line and visible lines have the same memory accesses, ensure we do that too
-
-    if (ppu->HCount >= 1 && ppu->HCount <= 256)
+    // Memory accessing to get data
+    if ((ppu->HCount >= 1 && ppu->HCount <= 256) || (ppu->HCount >= 321 && ppu->HCount <= 336))
     {
-      uint16_t tileAddress = 0x2000 | (ppu->V & 0x0FFF);
-      uint16_t attributeAddress = 0x23C0 | (ppu->V & 0x0C00)
-          | ((ppu->V >> 4) & 0x0038) | ((ppu->V >> 2) & 0x0007);
       uint8_t pixelCycle = ppu->HCount % 8;
 
       if (pixelCycle == 1)
       {
         // Fetch NT
+        ppu->NextBgTileId = Bus_ReadPPU(ppu->Bus, 0x2000 | (ppu->V & 0x0FFF));
       }
       else if (pixelCycle == 3)
       {
         // Fetch AT
+        ppu->NextBgAttribute = Bus_ReadPPU(ppu->Bus,
+                                           0x23C0
+                                           | (ppu->V & 0x0C00)
+                                           | ((ppu->V >> 4) & 0x0038)
+                                           | ((ppu->V >> 2) & 0x0007));
+        if (ppu->V & 0x40)
+        {
+          // Bit 1 of coarse Y is set
+          ppu->NextBgAttribute >>= 4;
+        }
+        if (ppu->V & 0x02)
+        {
+          // Bit 1 of coarse X is set
+          ppu->NextBgAttribute >>= 2;
+        }
+        ppu->NextBgAttribute &= 0x03;
       }
       else if (pixelCycle == 5)
       {
         // Fetch low BG tile byte
+        ppu->NextBgTileLow = Bus_ReadPPU(ppu->Bus,
+                                         ((ppu->Ctrl & CTRLFLAG_BACKGROUND_ADDRESS) << 12)
+                                         + ((uint16_t)ppu->NextBgTileId << 4)
+                                         + ((ppu->V >> 12) & 0x07) + 0);
       }
       else if (pixelCycle == 7)
       {
         // Fetch high BG tile byte
+        ppu->NextBgTileHigh = Bus_ReadPPU(ppu->Bus,
+                                          ((ppu->Ctrl & CTRLFLAG_BACKGROUND_ADDRESS) << 12)
+                                          + ((uint16_t)ppu->NextBgTileId << 4)
+                                          + ((ppu->V >> 12) & 0x07) + 8);
       }
-      // TODO: Render properly
-      RenderPixel(ppu->HCount, ppu->VCount, ppu->HCount % 0x40);
+      else if (pixelCycle == 0)
+      {
+        // Update shift registers?
+        ppu->SRPatternHigh = (ppu->SRPatternHigh & 0x00FF) | (ppu->NextBgTileHigh << 8);
+        ppu->SRPatternLow = (ppu->SRPatternLow & 0x00FF) | (ppu->NextBgTileLow << 8);
+        ppu->SRAttributeHigh = (ppu->SRAttributeHigh & 0x00FF) | (ppu->NextBgAttribute << 8);
+        ppu->SRAttributeLow = (ppu->SRAttributeLow & 0x00FF) | (ppu->NextBgAttribute << 8);
+      }
+
+      // Try to render a pixel, RenderPixel will deal with any out of bounds write attempts
+      uint8_t paletteIndex = (ppu->SRPatternLow & (1 << ppu->Scroll)) |
+                             (ppu->SRPatternHigh & (1 << ppu->Scroll)) << 2;
+      RenderPixel(ppu->HCount, ppu->VCount, paletteIndex);
     }
   }
   // Post render scanline + 1
@@ -247,6 +280,13 @@ void PPU_Tick(PPU_t *ppu)
       }
     }
   }
+
+  // Shift the shift registers
+  // TODO: Find correct shift direction
+  ppu->SRAttributeHigh >>= 1;
+  ppu->SRAttributeLow >>= 1;
+  ppu->SRPatternHigh >>= 1;
+  ppu->SRPatternLow >>= 1;
 
   // Calculate next scanline position
   ppu->HCount++;

@@ -8,6 +8,7 @@
 #include "Bus.h"
 #include "CPU.h"
 #include "PPU.h"
+#include "log.h"
 
 #include "Mapper.h"
 #include <string.h>
