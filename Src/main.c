@@ -64,6 +64,8 @@ static bool _run;
 static bool _showCpu;
 static char _lastLoadedFileName[512];
 static SDL_Surface *_ppuRenderSurface;
+static uint8_t _patternTableDrawIndex = 2;
+static SDL_Surface *_ppuPatternTableSurfaces[2];
 
 
 int main(int argc, const char* argv[])
@@ -74,6 +76,46 @@ int main(int argc, const char* argv[])
   sdlReturnCode = SharedSDL_Start();
 
   return sdlReturnCode;
+}
+
+static void DrawPatternTable(Bus_t *bus, uint16_t tableStart, SDL_Surface *surface)
+{
+  uint8_t tileDataLow;
+  uint8_t tileDataHigh;
+
+  // Hack, hack, hack away
+  PPU_SetRenderSurface(surface);
+
+  // Pattern table is 16x16 tiles
+  for (int ty = 0; ty < 16; ty++)
+  {
+    for (int tx = 0; tx < 16; tx++)
+    {
+      for (int py = 0; py < 8; py++)
+      {
+        tileDataLow = Bus_ReadFromPPU(bus,
+                                      tableStart
+                                      + (ty << 8)
+                                      + (tx << 4)
+                                      + py
+                                      + 0);
+        tileDataHigh = Bus_ReadFromPPU(bus,
+                                       tableStart
+                                       + (ty << 8)
+                                       + (tx << 4)
+                                       + py
+                                       + 8);
+        for (int px = 0; px < 8; px++)
+        {
+          uint8_t pixel = ((tileDataLow & (0x80 >> px)) > 0)
+                          | (((tileDataHigh & (0x80 >> px)) > 0) << 1);
+          PPU_RenderPixel(bus->PPU, 8 * tx + px, 8 * ty + py, pixel, 0x00);
+        }
+      }
+    }
+  }
+
+  PPU_SetRenderSurface(_ppuRenderSurface);
 }
 
 static void Initialize()
@@ -105,6 +147,9 @@ static void Initialize()
   _ppuRenderSurface = SDL_CreateRGBSurfaceWithFormat(0, NES_SCREEN_WIDTH, NES_SCREEN_HEIGHT, 32, SDL_PIXELFORMAT_RGBA32);
   PPU_SetRenderSurface(_ppuRenderSurface);
 
+  _ppuPatternTableSurfaces[0] = SDL_CreateRGBSurfaceWithFormat(0, 16 * 8, 16 * 8, 32, SDL_PIXELFORMAT_RGBA32);
+  _ppuPatternTableSurfaces[1] = SDL_CreateRGBSurfaceWithFormat(0, 16 * 8, 16 * 8, 32, SDL_PIXELFORMAT_RGBA32);
+
   // Run first instruction
   cpu = NES_GetCPU();
   CPU_Reset(cpu);
@@ -130,6 +175,14 @@ static void Event(SDL_Event* event)
     else if (event->key.keysym.sym == SDLK_s)
     {
       _statusKeyWasPressed = true;
+    }
+    else if (event->key.keysym.sym == SDLK_p)
+    {
+      _patternTableDrawIndex++;
+      if (_patternTableDrawIndex > 2)
+      {
+        _patternTableDrawIndex = 0;
+      }
     }
   }
 }
@@ -334,6 +387,12 @@ static bool Update(float deltaTime)
     _logBuffer[sizeof(_logBuffer) - 1] = 0x00;
   }
 
+  // Draw pattern tables AFTER rendering
+  if (_patternTableDrawIndex < 2)
+  {
+    DrawPatternTable(bus, _patternTableDrawIndex * 0x1000, _ppuPatternTableSurfaces[_patternTableDrawIndex]);
+  }
+
   return true;
 }
 
@@ -384,12 +443,31 @@ static void Draw(SDL_Surface* surface)
 
   Text_DrawStringWrapping(surface, _logBuffer, 0, 288, surface->w / _font.GlyphWidth, &_font);
 
+  // Pattern table output
+  if (_patternTableDrawIndex < 2)
+  {
+    SDL_Rect srcRect =
+    {
+        w: 128,
+        h: 128,
+        x: 0,
+        y: 0
+    };
+    SDL_Rect dstRect =
+    {
+        w: 256,
+        h: 256,
+        x: nesScreenRect.w,
+        y: STATUS_BAR_HEIGHT
+    };
+
+    SDL_BlitScaled(_ppuPatternTableSurfaces[_patternTableDrawIndex], &srcRect,
+                    surface, &dstRect);
+  }
+
   // Debug: state
   Text_DrawString(surface, _run ? "Running" : "Stopped", 0, surface->h - _font.GlyphHeight, &_font);
-
-
-
-
+  Text_DrawString(surface, "- P: Pattern, Space: Step, R: Run, S: Status", 8 * _font.GlyphWidth, surface->h - _font.GlyphHeight, &_font);
 }
 
 

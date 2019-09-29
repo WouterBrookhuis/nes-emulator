@@ -59,7 +59,7 @@ static inline bool IsRendering(PPU_t *ppu)
   return IsFlagSet(&ppu->Mask, MASKFLAG_BACKGROUND) || IsFlagSet(&ppu->Mask, MASKFLAG_SPRITES);
 }
 
-static void RenderPixel(PPU_t *ppu, int x, int y, uint8_t pixel, uint8_t palette)
+void PPU_RenderPixel(PPU_t *ppu, int x, int y, uint8_t pixel, uint8_t palette)
 {
   if (_renderSurface == NULL)
   {
@@ -299,7 +299,7 @@ void PPU_Tick(PPU_t *ppu)
                     (((ppu->SRPatternHigh &  pixelBit) > 0) << 1);
     uint8_t palette = ((ppu->SRAttributeLow  & pixelBit) > 0) |
                       (((ppu->SRAttributeHigh &  pixelBit) > 0) << 1);
-    RenderPixel(ppu, ppu->HCount, ppu->VCount, pixel, palette);
+    PPU_RenderPixel(ppu, ppu->HCount, ppu->VCount, pixel, palette);
   }
 
   // Calculate next scanline position

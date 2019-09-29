@@ -72,4 +72,5 @@ void PPU_Reset(PPU_t *ppu);
 uint8_t PPU_ReadFromCpu(PPU_t *ppu, uint16_t address);
 void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data);
 void PPU_SetRenderSurface(SDL_Surface *surface);
+void PPU_RenderPixel(PPU_t *ppu, int x, int y, uint8_t pixel, uint8_t palette);
 #endif /* SRC_NES_PPU_H_ */
