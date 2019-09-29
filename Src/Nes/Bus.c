@@ -49,7 +49,7 @@ uint8_t Bus_ReadFromCPU(Bus_t *bus, uint16_t address)
 {
   uint8_t data;
 
-  if (bus->Mapper != NULL && bus->Mapper->ReadFn(bus->Mapper, address, &data))
+  if (bus->Mapper != NULL && bus->Mapper->ReadFromCpu(bus->Mapper, address, &data))
   {
     // Handled by mapper
   }
@@ -82,7 +82,7 @@ uint8_t Bus_ReadFromCPU(Bus_t *bus, uint16_t address)
 
 void Bus_WriteFromCPU(Bus_t *bus, uint16_t address, uint8_t data)
 {
-  if (bus->Mapper != NULL && bus->Mapper->WriteFn(bus->Mapper, address, data))
+  if (bus->Mapper != NULL && bus->Mapper->WriteFromCpu(bus->Mapper, address, data))
   {
     // Handled by mapper
   }
@@ -114,7 +114,7 @@ uint8_t Bus_ReadFromPPU(Bus_t *bus, uint16_t address)
   uint8_t data;
   address &= 0x3FFF;
 
-  if (bus->Mapper != NULL && bus->Mapper->ReadFn(bus->Mapper, address, &data))
+  if (bus->Mapper != NULL && bus->Mapper->ReadFromPpu(bus->Mapper, address, &data))
   {
     // Handled by mapper
   }
@@ -136,7 +136,7 @@ uint8_t Bus_ReadFromPPU(Bus_t *bus, uint16_t address)
         || localAddress == 0x18
         || localAddress == 0x1C)
     {
-      localAddress -= 0x10;
+      localAddress &= ~0x10;
     }
     data = _palette[localAddress];
   }
@@ -152,7 +152,7 @@ void Bus_WriteFromPPU(Bus_t *bus, uint16_t address, uint8_t data)
 {
   address &= 0x3FFF;
 
-  if (bus->Mapper != NULL && bus->Mapper->WriteFn(bus->Mapper, address, data))
+  if (bus->Mapper != NULL && bus->Mapper->WriteFromPpu(bus->Mapper, address, data))
   {
     // Handled by mapper
   }
@@ -174,7 +174,7 @@ void Bus_WriteFromPPU(Bus_t *bus, uint16_t address, uint8_t data)
         || localAddress == 0x18
         || localAddress == 0x1C)
     {
-      localAddress -= 0x10;
+      localAddress &= ~0x10;
     }
     _palette[localAddress] = data;
   }

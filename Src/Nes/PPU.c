@@ -81,6 +81,11 @@ static void RenderPixel(PPU_t *ppu, int x, int y, uint8_t pixel, uint8_t palette
                     _renderSurface->format->BytesPerPixel * x;
   Palette_GetRGB(colorPaletteIndex, &r, &g, &b);
   *(uint32_t*)pixelPtr = SDL_MapRGB(_renderSurface->format, r, g, b);
+
+  if (x % 8 == 0 || y % 8 == 0)
+  {
+    *(uint32_t*)pixelPtr = SDL_MapRGB(_renderSurface->format, 255, 0, 0);
+  }
 }
 
 void PPU_SetRenderSurface(SDL_Surface *surface)
@@ -261,17 +266,6 @@ void PPU_Tick(PPU_t *ppu)
         ppu->SRAttributeLow =   (ppu->SRAttributeLow & 0xFF00)  | (ppu->NextBgAttribute & 0x01 ? 0xFF : 0x00);
         ppu->SRAttributeHigh =  (ppu->SRAttributeHigh & 0xFF00) | (ppu->NextBgAttribute & 0x10 ? 0xFF : 0x00);
       }
-
-      // Try to render a pixel, RenderPixel will deal with any out of bounds write attempts
-      uint16_t pixelBit = (0x8000 >> ppu->X);
-      uint8_t pixel = ((ppu->SRPatternLow  & pixelBit) > 0) |
-                      (((ppu->SRPatternHigh &  pixelBit) > 0) << 1);
-      uint8_t palette = ((ppu->SRAttributeLow  & pixelBit) > 0) |
-                        (((ppu->SRAttributeHigh &  pixelBit) > 0) << 1);
-      if (IsRendering(ppu))
-      {
-        RenderPixel(ppu, ppu->HCount, ppu->VCount, pixel, palette);
-      }
     }
   }
   // Post render scanline + 1
@@ -287,6 +281,17 @@ void PPU_Tick(PPU_t *ppu)
         Bus_TriggerNMI(ppu->Bus);
       }
     }
+  }
+  // Try to render a pixel
+  if (IsRendering(ppu))
+  {
+    // Try to render a pixel, RenderPixel will deal with any out of bounds write attempts
+    uint16_t pixelBit = (0x8000 >> ppu->X);
+    uint8_t pixel = ((ppu->SRPatternLow  & pixelBit) > 0) |
+                    (((ppu->SRPatternHigh &  pixelBit) > 0) << 1);
+    uint8_t palette = ((ppu->SRAttributeLow  & pixelBit) > 0) |
+                      (((ppu->SRAttributeHigh &  pixelBit) > 0) << 1);
+    RenderPixel(ppu, ppu->HCount, ppu->VCount, pixel, palette);
   }
 
   // Shift the shift registers

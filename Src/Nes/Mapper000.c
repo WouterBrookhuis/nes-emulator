@@ -14,21 +14,12 @@
 
 static uint8_t _mapper000Ram[SIZE_8KB];
 
-bool Mapper000_Read(Mapper_t *mapper,
-                    uint16_t address,
-                    uint8_t *data)
+bool Mapper000_ReadFromCpu(Mapper_t *mapper,
+                           uint16_t address,
+                           uint8_t *data)
 {
   Mapper000Data_t *customData = (Mapper000Data_t*) mapper->CustomData;
-  if (address >= 0x0000 && address <= 0x1FFF)
-  {
-    if (mapper->NumChrBanks > 0)
-    {
-      // PPU CHR ROM
-      *data = mapper->Memory[address + mapper->ChrOffset];
-      return true;
-    }
-  }
-  else if (address >= 0x6000 && address <= 0x7FFF)
+  if (address >= 0x6000 && address <= 0x7FFF)
   {
     // Optional RAM bank, we always provide it
     *data = customData->PrgRam8k[address - 0x6000];
@@ -77,9 +68,9 @@ bool Mapper000_Read(Mapper_t *mapper,
   return false;
 }
 
-bool Mapper000_Write(Mapper_t *mapper,
-                     uint16_t address,
-                     uint8_t data)
+bool Mapper000_WriteFromCpu(Mapper_t *mapper,
+                            uint16_t address,
+                            uint8_t data)
 {
   Mapper000Data_t *customData = (Mapper000Data_t*) mapper->CustomData;
   if (address >= 0x6000 && address <= 0x7FFF)
@@ -131,6 +122,32 @@ bool Mapper000_Write(Mapper_t *mapper,
   return false;
 }
 
+bool Mapper000_ReadFromPpu(Mapper_t *mapper,
+                           uint16_t address,
+                           uint8_t *data)
+{
+  //Mapper000Data_t *customData = (Mapper000Data_t*) mapper->CustomData;
+  if (address >= 0x0000 && address <= 0x1FFF)
+  {
+    if (mapper->NumChrBanks > 0)
+    {
+      // PPU CHR ROM
+      *data = mapper->Memory[address + mapper->ChrOffset];
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool Mapper000_WriteFromPpu(Mapper_t *mapper,
+                            uint16_t address,
+                            uint8_t data)
+{
+  //Mapper000Data_t *customData = (Mapper000Data_t*) mapper->CustomData;
+  return false;
+}
+
 void Mapper000_Initialize(Mapper_t *mapper,
                           INesHeader_t *header)
 {
@@ -144,8 +161,10 @@ void Mapper000_Initialize(Mapper_t *mapper,
   mapper->ChrOffset = header->PrgRomSize * SIZE_16KB;
   mapper->NumPrgBanks = header->PrgRomSize;
   mapper->NumChrBanks = header->ChrRomSize;
-  mapper->ReadFn = Mapper000_Read;
-  mapper->WriteFn = Mapper000_Write;
+  mapper->ReadFromCpu = Mapper000_ReadFromCpu;
+  mapper->ReadFromPpu = Mapper000_ReadFromPpu;
+  mapper->WriteFromCpu = Mapper000_WriteFromCpu;
+  mapper->WriteFromPpu = Mapper000_WriteFromPpu;
 
   Mapper000Data_t *customData;
   customData = malloc(sizeof(Mapper000Data_t));

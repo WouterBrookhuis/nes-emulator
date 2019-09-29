@@ -35,8 +35,10 @@ typedef struct _Mapper_t
   uint8_t *Memory;      // This mapper's backing memory, used internally
   size_t MemorySize;    // The size of the mapper's memory, used internally
   size_t ChrOffset;     // Offset of CHR rom/ram in Memory
-  Mapper_Read ReadFn;   // The mapper read function
-  Mapper_Write WriteFn; // The mapper write function
+  Mapper_Read ReadFromCpu;   // The mapper read function
+  Mapper_Write WriteFromCpu; // The mapper write function
+  Mapper_Read ReadFromPpu;   // The mapper read function
+  Mapper_Write WriteFromPpu; // The mapper write function
   void *CustomData;     // Pointer to custom data for the mapper implementation
 } Mapper_t;
 
