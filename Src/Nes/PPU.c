@@ -309,9 +309,21 @@ uint8_t PPU_Read(PPU_t *ppu, uint16_t address)
     return ppu->LatchedData;
   case 0x0007:
     // Data
-    // TODO: Data read
+    // Reading data returns the last byte that was stored in DataBuffer
+    // UNLESS we are reading from palette memory, in which case it is
+    // returned immediately
+    result = ppu->DataBuffer;
+    // DataBuffer only gets updated by reading this register
+    ppu->DataBuffer = Bus_ReadPPU(ppu->Bus, ppu->V & 0x3FFF);
+    // Check if we are reading palette memory and update result accordingly
+    if (ppu->V >= 0x3F00 && ppu->V <= 0x3FFF)
+    {
+      result = ppu->DataBuffer;
+      // TODO: DataBuffer should be filled with nametable data 'underneath' palette
+    }
+    // The vram address always gets incremented on reading
     ppu->V += IsFlagSet(&ppu->Ctrl, CTRLFLAG_VRAM_INCREMENT) ? 32 : 1;
-    break;
+    return result;
   default:
     // TODO: Error
     break;
@@ -410,7 +422,7 @@ void PPU_Write(PPU_t *ppu, uint16_t address, uint8_t data)
   case 0x0007:
     // Data
     // TODO: Weird glitches for writing to 0x2007 during rendering
-    Bus_WritePPU(ppu->Bus, ppu->V, data);
+    Bus_WritePPU(ppu->Bus, ppu->V & 0x3FFF, data);
     ppu->V += IsFlagSet(&ppu->Ctrl, CTRLFLAG_VRAM_INCREMENT) ? 32 : 1;
     break;
   default:
