@@ -17,6 +17,7 @@ static int _ppuClockDivisor;
 static CPU_t _cpu;
 static Bus_t _bus;
 static PPU_t _ppu;
+static bool _ppuLastFrameEven;
 
 void NES_Initialize(void)
 {
@@ -27,6 +28,8 @@ void NES_Initialize(void)
   CPU_Initialize(&_cpu);
   PPU_Initialize(&_ppu);
   Bus_Initialize(&_bus, &_cpu, &_ppu);
+
+  _ppuLastFrameEven = _ppu.IsEvenFrame;
 }
 
 void NES_TickClock(void)
@@ -54,6 +57,15 @@ void NES_TickUntilCPUComplete(void)
   {
     NES_TickClock();
   }
+}
+
+void NES_TickUntilFrameComplete(void)
+{
+  while (_ppu.IsEvenFrame == _ppuLastFrameEven)
+  {
+    NES_TickClock();
+  }
+  _ppu.IsEvenFrame = _ppuLastFrameEven;
 }
 
 PPU_t *NES_GetPPU(void)

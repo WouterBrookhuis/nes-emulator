@@ -56,8 +56,8 @@ typedef struct _PPU_t
   // Rendering shift registers
   uint16_t SRPatternHigh;   // High bit of pattern
   uint16_t SRPatternLow;    // Low bit of pattern
-  uint8_t SRAttributeHigh;  // High bit of attribute
-  uint8_t SRAttributeLow;   // Low bit of attribute
+  uint16_t SRAttributeHigh; // High bit of attribute
+  uint16_t SRAttributeLow;  // Low bit of attribute
 
   uint8_t NextBgTileId;
   uint8_t NextBgAttribute;

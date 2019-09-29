@@ -105,7 +105,15 @@ uint8_t Bus_ReadPPU(Bus_t *bus, uint16_t address)
   }
   if (address >= 0x3F00 && address <= 0x3FFF)
   {
-    return _palette[address & 0x00FF];
+    uint16_t localAddress = address & 0x001F;
+    if (localAddress == 0x10
+        || localAddress == 0x14
+        || localAddress == 0x18
+        || localAddress == 0x1C)
+    {
+      localAddress -= 0x10;
+    }
+    return _palette[localAddress];
   }
   else if (bus->Mapper != NULL)
   {
@@ -125,7 +133,15 @@ void Bus_WritePPU(Bus_t *bus, uint16_t address, uint8_t data)
   }
   if (address >= 0x3F00 && address <= 0x3FFF)
   {
-    _palette[address & 0x00FF] = data;
+    uint16_t localAddress = address & 0x001F;
+    if (localAddress == 0x10
+        || localAddress == 0x14
+        || localAddress == 0x18
+        || localAddress == 0x1C)
+    {
+      localAddress -= 0x10;
+    }
+    _palette[localAddress] = data;
   }
   else if (bus->Mapper != NULL)
   {

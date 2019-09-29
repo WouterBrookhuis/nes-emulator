@@ -15,6 +15,7 @@
 void NES_Initialize(void);
 void NES_TickClock(void);
 void NES_TickUntilCPUComplete(void);
+void NES_TickUntilFrameComplete(void);
 
 PPU_t *NES_GetPPU(void);
 CPU_t *NES_GetCPU(void);

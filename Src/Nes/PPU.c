@@ -59,12 +59,14 @@ static inline bool IsRendering(PPU_t *ppu)
   return IsFlagSet(&ppu->Mask, MASKFLAG_BACKGROUND) || IsFlagSet(&ppu->Mask, MASKFLAG_SPRITES);
 }
 
-static void RenderPixel(int x, int y, uint8_t paletteIndex)
+static void RenderPixel(PPU_t *ppu, int x, int y, uint8_t pixel, uint8_t palette)
 {
   if (_renderSurface == NULL)
   {
     return;
   }
+
+  uint8_t colorPaletteIndex = Bus_ReadPPU(ppu->Bus, 0x3F00 + (palette << 2) + pixel);
 
   if (x < 0 || x >= _renderSurface->w || y < 0 || y >= _renderSurface->h)
   {
@@ -74,11 +76,11 @@ static void RenderPixel(int x, int y, uint8_t paletteIndex)
   uint8_t r;
   uint8_t g;
   uint8_t b;
-  uint8_t *pixel = (uint8_t*)_renderSurface->pixels +
+  uint8_t *pixelPtr = (uint8_t*)_renderSurface->pixels +
                     _renderSurface->w * _renderSurface->format->BytesPerPixel * y +
                     _renderSurface->format->BytesPerPixel * x;
-  Palette_GetRGB(paletteIndex, &r, &g, &b);
-  *(uint32_t*)pixel = SDL_MapRGB(_renderSurface->format, r, g, b);
+  Palette_GetRGB(colorPaletteIndex, &r, &g, &b);
+  *(uint32_t*)pixelPtr = SDL_MapRGB(_renderSurface->format, r, g, b);
 }
 
 void PPU_SetRenderSurface(SDL_Surface *surface)
@@ -254,16 +256,22 @@ void PPU_Tick(PPU_t *ppu)
       else if (pixelCycle == 0)
       {
         // Update shift registers?
-        ppu->SRPatternHigh = (ppu->SRPatternHigh & 0x00FF) | (ppu->NextBgTileHigh << 8);
-        ppu->SRPatternLow = (ppu->SRPatternLow & 0x00FF) | (ppu->NextBgTileLow << 8);
-        ppu->SRAttributeHigh = (ppu->SRAttributeHigh & 0x00FF) | (ppu->NextBgAttribute << 8);
-        ppu->SRAttributeLow = (ppu->SRAttributeLow & 0x00FF) | (ppu->NextBgAttribute << 8);
+        ppu->SRPatternLow =     (ppu->SRPatternLow & 0xFF00)    | (ppu->NextBgTileLow);
+        ppu->SRPatternHigh =    (ppu->SRPatternHigh & 0xFF00)   | (ppu->NextBgTileHigh);
+        ppu->SRAttributeLow =   (ppu->SRAttributeLow & 0xFF00)  | (ppu->NextBgAttribute & 0x01 ? 0xFF : 0x00);
+        ppu->SRAttributeHigh =  (ppu->SRAttributeHigh & 0xFF00) | (ppu->NextBgAttribute & 0x10 ? 0xFF : 0x00);
       }
 
       // Try to render a pixel, RenderPixel will deal with any out of bounds write attempts
-      uint8_t paletteIndex = (ppu->SRPatternLow & (1 << ppu->Scroll)) |
-                             (ppu->SRPatternHigh & (1 << ppu->Scroll)) << 2;
-      RenderPixel(ppu->HCount, ppu->VCount, paletteIndex);
+      uint16_t pixelBit = (0x8000 >> ppu->X);
+      uint8_t pixel = ((ppu->SRPatternLow  & pixelBit) > 0) |
+                      (((ppu->SRPatternHigh &  pixelBit) > 0) << 1);
+      uint8_t palette = ((ppu->SRAttributeLow  & pixelBit) > 0) |
+                        (((ppu->SRAttributeHigh &  pixelBit) > 0) << 1);
+      if (IsRendering(ppu))
+      {
+        RenderPixel(ppu, ppu->HCount, ppu->VCount, pixel, palette);
+      }
     }
   }
   // Post render scanline + 1
@@ -282,16 +290,15 @@ void PPU_Tick(PPU_t *ppu)
   }
 
   // Shift the shift registers
-  // TODO: Find correct shift direction
-  ppu->SRAttributeHigh >>= 1;
-  ppu->SRAttributeLow >>= 1;
-  ppu->SRPatternHigh >>= 1;
-  ppu->SRPatternLow >>= 1;
+  ppu->SRAttributeHigh <<= 1;
+  ppu->SRAttributeLow <<= 1;
+  ppu->SRPatternHigh <<= 1;
+  ppu->SRPatternLow <<= 1;
 
   // Calculate next scanline position
   ppu->HCount++;
   // 340 is the last cycle, so go to the next line when we hit 341
-  // However, on uneven frames with rendering disabled we skip the last cycle of
+  // However, on uneven frames with rendering enabled we skip the last cycle of
   // the pre-render scanline (-1 here)
   if (ppu->HCount == 341 ||
       (!ppu->IsEvenFrame && IsRendering(ppu) && ppu->HCount == 340 && ppu->VCount == -1))

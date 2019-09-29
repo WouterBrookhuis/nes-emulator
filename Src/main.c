@@ -80,7 +80,10 @@ static void Initialize()
 {
   //const char * romFile = "Resources/all_instrs.nes";
   //const char * romFile = "Resources/official_only.nes";
-  const char * romFile = "Resources/nestest.nes";
+  //const char * romFile = "Resources/nestest.nes";
+  //const char * romFile = "Resources/donkey kong.nes";
+  //const char * romFile = "Resources/super mario bros.nes";
+  const char * romFile = "Resources/palette_ram.nes";
   //const char * romFile = "Resources/rom_singles/01-basics.nes";
   const char * paletteFile = "Resources/ntscpalette.pal";
   Bus_t *bus;
@@ -91,6 +94,10 @@ static void Initialize()
     strncpy(_lastLoadedFileName, romFile, sizeof(_lastLoadedFileName));
     bus = NES_GetBus();
     Bus_SetMapper(bus, &_mapper);
+  }
+  else
+  {
+    LogError("Unable to load NES ROM, do not run system!");
   }
 
   Palette_LoadFrom(paletteFile);
@@ -295,11 +302,12 @@ static bool Update(float deltaTime)
   if (_run)
   {
     // Realtime-ish speed
-    for (int i = 0; i < 29830; i++)
+    for (int i = 0; i < 1; i++)
     {
       FormatInstruction(cpu, _textBuffer);
-      NES_TickClock();
-      NES_TickUntilCPUComplete();
+      //NES_TickClock();
+      //NES_TickUntilCPUComplete();
+      NES_TickUntilFrameComplete();
       if (cpu->IsKilled)
       {
         _run = false;
