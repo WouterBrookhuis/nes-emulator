@@ -64,9 +64,9 @@ bool INesLoader_Load(const char* file, Mapper_t* mapper)
   case 0x00:
     Mapper000_Initialize(mapper, &header);
     break;
-  case 0x01:
-    Mapper001_Initialize(mapper, &header);
-    break;
+//  case 0x01:
+//    Mapper001_Initialize(mapper, &header);
+//    break;
   default:
     fclose(f);
     return false;

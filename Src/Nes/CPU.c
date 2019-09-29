@@ -80,7 +80,7 @@ void CPU_Tick(CPU_t *cpu)
     {
       // Time for a new instruction!
       cpu->Address = cpu->PC;
-      cpu->Instruction = Bus_ReadCPU(cpu->Bus, cpu->PC);
+      cpu->Instruction = Bus_ReadFromCPU(cpu->Bus, cpu->PC);
       cpu->InstructionPC = cpu->PC;
 
       newInstruction = InstructionTable_GetInstruction(cpu->Instruction);

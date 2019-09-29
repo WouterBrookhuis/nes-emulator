@@ -80,10 +80,10 @@ static void Initialize()
 {
   //const char * romFile = "Resources/all_instrs.nes";
   //const char * romFile = "Resources/official_only.nes";
-  //const char * romFile = "Resources/nestest.nes";
+  const char * romFile = "Resources/nestest.nes";
   //const char * romFile = "Resources/donkey kong.nes";
   //const char * romFile = "Resources/super mario bros.nes";
-  const char * romFile = "Resources/palette_ram.nes";
+  //const char * romFile = "Resources/palette_ram.nes";
   //const char * romFile = "Resources/rom_singles/01-basics.nes";
   const char * paletteFile = "Resources/ntscpalette.pal";
   Bus_t *bus;
@@ -138,13 +138,13 @@ static void FormatInstruction(CPU_t *cpu, char* textBuffer)
 {
   uint8_t instructionBytes[3];
   const InstructionTableEntry_t *instr;
-  instructionBytes[0] = Bus_ReadCPU(cpu->Bus, cpu->PC);
+  instructionBytes[0] = Bus_ReadFromCPU(cpu->Bus, cpu->PC);
   instr = InstructionTable_GetInstruction(instructionBytes[0]);
   uint8_t instructionLength = AddressingMode_GetInstructionLength(instr->AddressingMode);
 
   for (uint8_t i = 1; i < instructionLength; i++)
   {
-    instructionBytes[i] = Bus_ReadCPU(cpu->Bus, cpu->PC + i);
+    instructionBytes[i] = Bus_ReadFromCPU(cpu->Bus, cpu->PC + i);
   }
 
   sprintf(textBuffer, "%04X  %02X ", cpu->PC, instructionBytes[0]);
@@ -241,7 +241,7 @@ static bool Update(float deltaTime)
   uint16_t memAddress = cpu->InstructionPC - HALF_MEM_WINDOW_SIZE;
   for (int i = 0; i < HALF_MEM_WINDOW_SIZE * 2 + 1; i++)
   {
-    uint8_t memData = Bus_ReadCPU(bus, memAddress);
+    uint8_t memData = Bus_ReadFromCPU(bus, memAddress);
     if (i == HALF_MEM_WINDOW_SIZE)
     {
       sprintf(_memTextBuffer[i],
@@ -273,7 +273,7 @@ static bool Update(float deltaTime)
              );
     for (int j = 0; j < MEMORY_VIEW_COLUMNS; j++)
     {
-      uint8_t memData = Bus_ReadCPU(bus, memAddress);
+      uint8_t memData = Bus_ReadFromCPU(bus, memAddress);
       snprintf(_memoryViewBuffer + strlen(_memoryViewBuffer),
                sizeof(_memoryViewBuffer) - strlen(_memoryViewBuffer),
                " %02X",
@@ -291,11 +291,12 @@ static bool Update(float deltaTime)
 
   if (_stepKeyWasPressed)
   {
-    if (cpu->CyclesLeftForInstruction == 0)
-    {
-      NES_TickClock();
-    }
-    NES_TickUntilCPUComplete();
+//    if (cpu->CyclesLeftForInstruction == 0)
+//    {
+//      NES_TickClock();
+//    }
+//    NES_TickUntilCPUComplete();
+    NES_TickUntilFrameComplete();
     _stepKeyWasPressed = false;
   }
 
@@ -316,16 +317,16 @@ static bool Update(float deltaTime)
     }
   }
 
-  if (Bus_ReadCPU(bus, 0x6001) == 0xDE &&
-      Bus_ReadCPU(bus, 0x6002) == 0xB0 &&
-      Bus_ReadCPU(bus, 0x6003) == 0x61)
+  if (Bus_ReadFromCPU(bus, 0x6001) == 0xDE &&
+      Bus_ReadFromCPU(bus, 0x6002) == 0xB0 &&
+      Bus_ReadFromCPU(bus, 0x6003) == 0x61)
   {
     // Cpu test text is available to read
     memset(_logBuffer, 0, sizeof(_logBuffer));
     memAddress = 0x6004;
     uint8_t data;
     uint16_t offset = 0;
-    while ((data = Bus_ReadCPU(bus, memAddress + offset)) != 0x00 && offset < sizeof(_logBuffer))
+    while ((data = Bus_ReadFromCPU(bus, memAddress + offset)) != 0x00 && offset < sizeof(_logBuffer))
     {
       _logBuffer[offset] = (char)data;
       offset++;

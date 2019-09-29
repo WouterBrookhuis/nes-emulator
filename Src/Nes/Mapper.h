@@ -8,6 +8,7 @@
 #ifndef SRC_NES_MAPPER_H_
 #define SRC_NES_MAPPER_H_
 
+#include <stdbool.h>
 #include <stddef.h>
 
 typedef enum _MirrorMode_t
@@ -21,8 +22,8 @@ typedef enum _MirrorMode_t
 typedef struct _Bus_t Bus_t;
 typedef struct _Mapper_t Mapper_t;
 
-typedef uint8_t (*Mapper_Read)(Mapper_t *mapper, uint16_t address);
-typedef void (*Mapper_Write)(Mapper_t *mapper, uint16_t address, uint8_t data);
+typedef bool (*Mapper_Read)(Mapper_t *mapper, uint16_t address, uint8_t *data);
+typedef bool (*Mapper_Write)(Mapper_t *mapper, uint16_t address, uint8_t data);
 
 typedef struct _Mapper_t
 {

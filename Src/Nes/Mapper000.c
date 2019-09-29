@@ -10,29 +10,29 @@
 #include "Bus.h"
 #include <string.h>
 #include <stdlib.h>
+#include "log.h"
 
 static uint8_t _mapper000Ram[SIZE_8KB];
 
-uint8_t Mapper000_Read(Mapper_t *mapper,
-                       uint16_t address)
+bool Mapper000_Read(Mapper_t *mapper,
+                    uint16_t address,
+                    uint8_t *data)
 {
   Mapper000Data_t *customData = (Mapper000Data_t*) mapper->CustomData;
   if (address >= 0x0000 && address <= 0x1FFF)
   {
-    // PPU CHR ROM
-    return mapper->Memory[address + mapper->ChrOffset];
-  }
-  else if (address >= 0x2000 && address <= 0x3EFF)
-  {
-    // Nametables
-    // We don't have any custom nametable logic, so forward it back to the bus for
-    // a default implementation
-    return Bus_ReadNametableDefault(mapper->Bus, address);
+    if (mapper->NumChrBanks > 0)
+    {
+      // PPU CHR ROM
+      *data = mapper->Memory[address + mapper->ChrOffset];
+      return true;
+    }
   }
   else if (address >= 0x6000 && address <= 0x7FFF)
   {
     // Optional RAM bank, we always provide it
-    return customData->PrgRam8k[address - 0x6000];
+    *data = customData->PrgRam8k[address - 0x6000];
+    return true;
   }
   else if (address >= 0x8000 && address <= 0xFFFF)
   {
@@ -70,15 +70,14 @@ uint8_t Mapper000_Read(Mapper_t *mapper,
 
     uint32_t index = address - externalBankBaseAddress
         + internalBankBaseAddress;
-    return mapper->Memory[index];
+    *data = mapper->Memory[index];
+    return true;
   }
 
-  // TODO: PPU
-  // TODO: What to do for lower addresses?
-  return 0;
+  return false;
 }
 
-void Mapper000_Write(Mapper_t *mapper,
+bool Mapper000_Write(Mapper_t *mapper,
                      uint16_t address,
                      uint8_t data)
 {
@@ -87,13 +86,7 @@ void Mapper000_Write(Mapper_t *mapper,
   {
     // Optional RAM bank, we always provide it
     customData->PrgRam8k[address - 0x6000] = data;
-  }
-  else if (address >= 0x2000 && address <= 0x3EFF)
-  {
-    // Nametables
-    // We don't have any custom nametable logic, so forward it back to the bus for
-    // a default implementation
-    Bus_WriteNametableDefault(mapper->Bus, address, data);
+    return true;
   }
   else if (address >= 0x8000 && address <= 0xFFFF)
   {
@@ -132,10 +125,10 @@ void Mapper000_Write(Mapper_t *mapper,
     uint32_t index = address - externalBankBaseAddress
         + internalBankBaseAddress;
     mapper->Memory[index] = data;
+    return true;
   }
 
-  // TODO: PPU
-  // TODO: What to do for lower addresses?
+  return false;
 }
 
 void Mapper000_Initialize(Mapper_t *mapper,

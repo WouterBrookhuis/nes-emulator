@@ -18,6 +18,10 @@ uint8_t _testRam[UINT16_MAX];
 uint8_t _palette[256];
 uint8_t _vram[2048];
 
+static uint8_t ReadNametableDefault(Bus_t *bus, uint16_t address);
+
+static void WriteNametableDefault(Bus_t *bus, uint16_t address, uint8_t data);
+
 void Bus_Initialize(Bus_t *bus, CPU_t *cpu, PPU_t *ppu)
 {
   memset(bus, 0, sizeof(*bus));
@@ -40,46 +44,55 @@ void Bus_TriggerNMI(Bus_t *bus)
   CPU_NMI(bus->CPU);
 }
 
-uint8_t Bus_ReadCPU(Bus_t *bus, uint16_t address)
+uint8_t Bus_ReadFromCPU(Bus_t *bus, uint16_t address)
 {
-  if (address < 0x2000)
+  uint8_t data;
+
+  if (bus->Mapper != NULL && bus->Mapper->ReadFn(bus->Mapper, address, &data))
   {
-    return _testRam[address & 0x7FF];
+    // Handled by mapper
+  }
+  else if (address < 0x2000)
+  {
+    data = _testRam[address & 0x7FF];
   }
   else if (address < 0x4000)
   {
     // PPU
-    return PPU_Read(bus->PPU, address);
+    data = PPU_ReadFromCpu(bus->PPU, address);
   }
   else if (address < 0x4018)
   {
     // APU + IO
-    return 0;
+    data = 0;
   }
   else if (address < 0x4020)
   {
     // Test APU + IO
-    return 0;
+    data = 0;
   }
-  else if (bus->Mapper != NULL)
+  else
   {
-    // Cartridge
-    return bus->Mapper->ReadFn(bus->Mapper, address);
+    LogError("Unmapped CPU read @ 0x%04X", address);
   }
-  // TODO: Log cartridge missing?
-  return 0;
+
+  return data;
 }
 
-void Bus_WriteCPU(Bus_t *bus, uint16_t address, uint8_t data)
+void Bus_WriteFromCPU(Bus_t *bus, uint16_t address, uint8_t data)
 {
-  if (address < 0x2000)
+  if (bus->Mapper != NULL && bus->Mapper->WriteFn(bus->Mapper, address, data))
+  {
+    // Handled by mapper
+  }
+  else if (address < 0x2000)
   {
     _testRam[address & 0x7FF] = data;
   }
   else if (address < 0x4000)
   {
     // PPU access
-    PPU_Write(bus->PPU, address, data);
+    PPU_WriteFromCpu(bus->PPU, address, data);
   }
   else if (address < 0x4018)
   {
@@ -89,21 +102,27 @@ void Bus_WriteCPU(Bus_t *bus, uint16_t address, uint8_t data)
   {
     // Test APU + IO
   }
-  else if (bus->Mapper != NULL)
+  else
   {
-    // Cartridge
-    bus->Mapper->WriteFn(bus->Mapper, address, data);
+    LogError("Unmapped CPU write @ 0x%04X", address);
   }
 }
 
-uint8_t Bus_ReadPPU(Bus_t *bus, uint16_t address)
+uint8_t Bus_ReadFromPPU(Bus_t *bus, uint16_t address)
 {
-  if (address > 0x3FFF)
+  uint8_t data;
+  address &= 0x3FFF;
+
+  if (bus->Mapper != NULL && bus->Mapper->ReadFn(bus->Mapper, address, &data))
   {
-    LogError("Invalid address for PPU read: 0x%04X", address);
-    return 0x00;
+    // Handled by mapper
   }
-  if (address >= 0x3F00 && address <= 0x3FFF)
+  else if (address >= 0x2000 && address <= 0x3EFF)
+  {
+    // Default nametable implementation
+    data = ReadNametableDefault(bus, address);
+  }
+  else if (address >= 0x3F00 && address <= 0x3FFF)
   {
     uint16_t localAddress = address & 0x001F;
     if (localAddress == 0x10
@@ -113,25 +132,30 @@ uint8_t Bus_ReadPPU(Bus_t *bus, uint16_t address)
     {
       localAddress -= 0x10;
     }
-    return _palette[localAddress];
+    data = _palette[localAddress];
   }
-  else if (bus->Mapper != NULL)
+  else
   {
-    // Cartridge
-    return bus->Mapper->ReadFn(bus->Mapper, address);
+    LogError("Unmapped PPU read @ 0x%04X", address);
   }
-  // TODO: Log cartridge missing?
-  return 0;
+
+  return data;
 }
 
-void Bus_WritePPU(Bus_t *bus, uint16_t address, uint8_t data)
+void Bus_WriteFromPPU(Bus_t *bus, uint16_t address, uint8_t data)
 {
-  if (address > 0x3FFF)
+  address &= 0x3FFF;
+
+  if (bus->Mapper != NULL && bus->Mapper->WriteFn(bus->Mapper, address, data))
   {
-    LogError("Invalid address for PPU write: 0x%04X", address);
-    return;
+    // Handled by mapper
   }
-  if (address >= 0x3F00 && address <= 0x3FFF)
+  else if (address >= 0x2000 && address <= 0x3EFF)
+  {
+    // Default nametable implementation
+    WriteNametableDefault(bus, address, data);
+  }
+  else if (address >= 0x3F00 && address <= 0x3FFF)
   {
     uint16_t localAddress = address & 0x001F;
     if (localAddress == 0x10
@@ -143,14 +167,13 @@ void Bus_WritePPU(Bus_t *bus, uint16_t address, uint8_t data)
     }
     _palette[localAddress] = data;
   }
-  else if (bus->Mapper != NULL)
+  else
   {
-    // Cartridge
-    bus->Mapper->WriteFn(bus->Mapper, address, data);
+    LogError("Unmapped PPU write @ 0x%04X", address);
   }
 }
 
-uint8_t Bus_ReadNametableDefault(Bus_t *bus, uint16_t address)
+static uint8_t ReadNametableDefault(Bus_t *bus, uint16_t address)
 {
   if (address >= 0x3000)
   {
@@ -198,7 +221,7 @@ uint8_t Bus_ReadNametableDefault(Bus_t *bus, uint16_t address)
   return 0x55;
 }
 
-void Bus_WriteNametableDefault(Bus_t *bus, uint16_t address, uint8_t data)
+static void WriteNametableDefault(Bus_t *bus, uint16_t address, uint8_t data)
 {
   if (address >= 0x3000)
   {

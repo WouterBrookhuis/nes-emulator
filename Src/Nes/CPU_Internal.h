@@ -47,18 +47,18 @@ static inline void SetFlag(uint8_t *P, uint8_t flag, bool set)
 static inline uint16_t Read16(CPU_t *cpu, uint16_t address)
 {
   uint8_t lowByte;
-  lowByte = Bus_ReadCPU(cpu->Bus, address);
-  return (Bus_ReadCPU(cpu->Bus, address + 1) << 8) | lowByte;
+  lowByte = Bus_ReadFromCPU(cpu->Bus, address);
+  return (Bus_ReadFromCPU(cpu->Bus, address + 1) << 8) | lowByte;
 }
 
 static inline uint8_t Read(CPU_t *cpu, uint16_t address)
 {
-  return Bus_ReadCPU(cpu->Bus, address);
+  return Bus_ReadFromCPU(cpu->Bus, address);
 }
 
 static inline void Write(CPU_t *cpu, uint16_t address, uint8_t data)
 {
-  Bus_WriteCPU(cpu->Bus, address, data);
+  Bus_WriteFromCPU(cpu->Bus, address, data);
 }
 
 static inline void Push(CPU_t *cpu, uint8_t data)

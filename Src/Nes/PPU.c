@@ -66,7 +66,7 @@ static void RenderPixel(PPU_t *ppu, int x, int y, uint8_t pixel, uint8_t palette
     return;
   }
 
-  uint8_t colorPaletteIndex = Bus_ReadPPU(ppu->Bus, 0x3F00 + (palette << 2) + pixel);
+  uint8_t colorPaletteIndex = Bus_ReadFromPPU(ppu->Bus, 0x3F00 + (palette << 2) + pixel);
 
   if (x < 0 || x >= _renderSurface->w || y < 0 || y >= _renderSurface->h)
   {
@@ -215,12 +215,12 @@ void PPU_Tick(PPU_t *ppu)
       if (pixelCycle == 1)
       {
         // Fetch NT
-        ppu->NextBgTileId = Bus_ReadPPU(ppu->Bus, 0x2000 | (ppu->V & 0x0FFF));
+        ppu->NextBgTileId = Bus_ReadFromPPU(ppu->Bus, 0x2000 | (ppu->V & 0x0FFF));
       }
       else if (pixelCycle == 3)
       {
         // Fetch AT
-        ppu->NextBgAttribute = Bus_ReadPPU(ppu->Bus,
+        ppu->NextBgAttribute = Bus_ReadFromPPU(ppu->Bus,
                                            0x23C0
                                            | (ppu->V & 0x0C00)
                                            | ((ppu->V >> 4) & 0x0038)
@@ -240,7 +240,7 @@ void PPU_Tick(PPU_t *ppu)
       else if (pixelCycle == 5)
       {
         // Fetch low BG tile byte
-        ppu->NextBgTileLow = Bus_ReadPPU(ppu->Bus,
+        ppu->NextBgTileLow = Bus_ReadFromPPU(ppu->Bus,
                                          ((ppu->Ctrl & CTRLFLAG_BACKGROUND_ADDRESS) << 12)
                                          + ((uint16_t)ppu->NextBgTileId << 4)
                                          + ((ppu->V >> 12) & 0x07) + 0);
@@ -248,7 +248,7 @@ void PPU_Tick(PPU_t *ppu)
       else if (pixelCycle == 7)
       {
         // Fetch high BG tile byte
-        ppu->NextBgTileHigh = Bus_ReadPPU(ppu->Bus,
+        ppu->NextBgTileHigh = Bus_ReadFromPPU(ppu->Bus,
                                           ((ppu->Ctrl & CTRLFLAG_BACKGROUND_ADDRESS) << 12)
                                           + ((uint16_t)ppu->NextBgTileId << 4)
                                           + ((ppu->V >> 12) & 0x07) + 8);
@@ -313,7 +313,7 @@ void PPU_Tick(PPU_t *ppu)
   }
 }
 
-uint8_t PPU_Read(PPU_t *ppu, uint16_t address)
+uint8_t PPU_ReadFromCpu(PPU_t *ppu, uint16_t address)
 {
   uint8_t result;
   uint16_t wrappedAddress = address & 0x0007;
@@ -321,6 +321,7 @@ uint8_t PPU_Read(PPU_t *ppu, uint16_t address)
   if (address == 0x4014)
   {
     // TODO: Do we want this here?
+    LogError("Trying to access OAM");
     return 0xFF;
   }
 
@@ -334,7 +335,7 @@ uint8_t PPU_Read(PPU_t *ppu, uint16_t address)
     return ppu->LatchedData;
   case 0x0002:
     // Status
-    result = (ppu->Status & ~STATFLAG_GARBAGE_MASK) | ppu->LatchedData;
+    result = (ppu->Status & ~STATFLAG_GARBAGE_MASK) | (ppu->LatchedData & STATFLAG_GARBAGE_MASK);
     // Reading causes the address latch and the vblank flag to reset
     SetFlag(&ppu->Status, STATFLAG_VBLANK, false);
     ppu->AddressLatch = 0;
@@ -343,9 +344,11 @@ uint8_t PPU_Read(PPU_t *ppu, uint16_t address)
     return result;
   case 0x0003:
     // OAMAddress
+    LogError("Trying to access OAM");
     return ppu->LatchedData;
   case 0x0004:
     // OAMData
+    LogError("Trying to access OAM");
     return ppu->OAMData;
     break;
   case 0x0005:
@@ -361,9 +364,9 @@ uint8_t PPU_Read(PPU_t *ppu, uint16_t address)
     // returned immediately
     result = ppu->DataBuffer;
     // DataBuffer only gets updated by reading this register
-    ppu->DataBuffer = Bus_ReadPPU(ppu->Bus, ppu->V & 0x3FFF);
+    ppu->DataBuffer = Bus_ReadFromPPU(ppu->Bus, ppu->V);
     // Check if we are reading palette memory and update result accordingly
-    if (ppu->V >= 0x3F00 && ppu->V <= 0x3FFF)
+    if (ppu->V >= 0x3F00)
     {
       result = ppu->DataBuffer;
       // TODO: DataBuffer should be filled with nametable data 'underneath' palette
@@ -379,13 +382,14 @@ uint8_t PPU_Read(PPU_t *ppu, uint16_t address)
   return 0x55;
 }
 
-void PPU_Write(PPU_t *ppu, uint16_t address, uint8_t data)
+void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data)
 {
   uint16_t wrappedAddress = address & 0x0007;
 
   if (address == 0x4014)
   {
     // TODO: Do we want this here?
+    LogError("Trying to access OAM");
     return;
   }
 
@@ -399,7 +403,7 @@ void PPU_Write(PPU_t *ppu, uint16_t address, uint8_t data)
     ppu->Ctrl = data;
     // Update temp register with nametable info
     // Bits 10-11 are the ones we need
-    ppu->T = (ppu->T & ~0x0C00) | ((data << 10) & 0x0C00);
+    ppu->T = (ppu->T & ~0x0C00) | (((uint16_t)data << 10) & 0x0C00);
 
     // If we are in VBLANK and the vblank status flag is still set, then enabling the NMI
     // here will instantly trigger it
@@ -417,10 +421,12 @@ void PPU_Write(PPU_t *ppu, uint16_t address, uint8_t data)
     break;
   case 0x0003:
     // OAMAddress
+    LogError("Trying to access OAM");
     ppu->OAMAddress = data;
     break;
   case 0x0004:
     // OAMData
+    LogError("Trying to access OAM");
     // TODO: Implement glitches
     break;
   case 0x0005:
@@ -469,7 +475,7 @@ void PPU_Write(PPU_t *ppu, uint16_t address, uint8_t data)
   case 0x0007:
     // Data
     // TODO: Weird glitches for writing to 0x2007 during rendering
-    Bus_WritePPU(ppu->Bus, ppu->V & 0x3FFF, data);
+    Bus_WriteFromPPU(ppu->Bus, ppu->V, data);
     ppu->V += IsFlagSet(&ppu->Ctrl, CTRLFLAG_VRAM_INCREMENT) ? 32 : 1;
     break;
   default:
