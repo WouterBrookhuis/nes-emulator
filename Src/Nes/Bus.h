@@ -9,17 +9,37 @@
 #define SRC_NES_BUS_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef struct _PPU_t PPU_t;
 typedef struct _CPU_t CPU_t;
 typedef struct _Mapper_t Mapper_t;
+
+typedef enum
+{
+  DMA_STATE_IDLE,
+  DMA_STATE_WAITING,
+  DMA_STATE_RUNNING
+} DMA_State_t;
+
+typedef struct _DMA_t
+{
+  DMA_State_t State;
+  uint16_t CPUBaseAddress;
+  uint16_t NumTransfersComplete;
+  uint8_t ByteIndex;
+  uint8_t Data;
+} DMA_t;
 
 typedef struct _Bus_t
 {
   CPU_t *CPU;
   PPU_t *PPU;
   Mapper_t *Mapper;
+  DMA_t DMA;
 } Bus_t;
+
+void Bus_TriggerDMA(Bus_t *bus, uint8_t cpuPage);
 
 void Bus_TriggerNMI(Bus_t *bus);
 

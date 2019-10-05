@@ -331,13 +331,6 @@ uint8_t PPU_ReadFromCpu(PPU_t *ppu, uint16_t address)
   uint8_t result;
   uint16_t wrappedAddress = address & 0x0007;
 
-  if (address == 0x4014)
-  {
-    // TODO: Do we want this here?
-    LogError("Trying to access OAM");
-    return 0xFF;
-  }
-
   switch (wrappedAddress)
   {
   case 0x0000:
@@ -397,13 +390,6 @@ uint8_t PPU_ReadFromCpu(PPU_t *ppu, uint16_t address)
 void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data)
 {
   uint16_t wrappedAddress = address & 0x0007;
-
-  if (address == 0x4014)
-  {
-    // TODO: Do we want this here?
-    LogError("Trying to trigger OAM DMA");
-    return;
-  }
 
   // Update the latched data on any write
   ppu->LatchedData = data;

@@ -19,6 +19,7 @@ static CPU_t _cpu;
 static Bus_t _bus;
 static PPU_t _ppu;
 static bool _ppuLastFrameEven;
+static bool _isEvenCpuCycle;
 
 void NES_Initialize(void)
 {
@@ -32,6 +33,7 @@ void NES_Initialize(void)
   Controllers_Initialize(2);
 
   _ppuLastFrameEven = _ppu.IsEvenFrame;
+  _isEvenCpuCycle = true;
 }
 
 void NES_TickClock(void)
@@ -42,7 +44,42 @@ void NES_TickClock(void)
   }
   if (_clockCycleCount % _cpuClockDivisor == 0)
   {
-    CPU_Tick(&_cpu);
+    // Handle DMA
+    switch (_bus.DMA.State)
+    {
+    case DMA_STATE_IDLE:
+      CPU_Tick(&_cpu);
+      break;
+    case DMA_STATE_WAITING:
+      if (!_isEvenCpuCycle)
+      {
+        // DMA can only start on even cycles, so if this was an odd cycle the next one is even
+        _bus.DMA.State = DMA_STATE_RUNNING;
+      }
+      break;
+    case DMA_STATE_RUNNING:
+      if (_isEvenCpuCycle)
+      {
+        // Read from cpu
+        _bus.DMA.Data = Bus_ReadFromCPU(&_bus, _bus.DMA.CPUBaseAddress + _bus.DMA.ByteIndex);
+      }
+      else
+      {
+        // Write to PPU OAM via OAMDATA register
+        PPU_WriteFromCpu(&_ppu, 0x2004, _bus.DMA.Data);
+
+        _bus.DMA.ByteIndex++;
+        _bus.DMA.NumTransfersComplete++;
+
+        if (_bus.DMA.NumTransfersComplete == 256)
+        {
+          _bus.DMA.State = DMA_STATE_IDLE;
+        }
+      }
+      break;
+    }
+
+    _isEvenCpuCycle = !_isEvenCpuCycle;
   }
   _clockCycleCount++;
 }

@@ -33,12 +33,21 @@ void Bus_Initialize(Bus_t *bus, CPU_t *cpu, PPU_t *ppu)
   // Link PPU and bus together
   bus->PPU = ppu;
   ppu->Bus = bus;
+  bus->DMA.State = DMA_STATE_IDLE;
 }
 
 void Bus_SetMapper(Bus_t *bus, Mapper_t *mapper)
 {
   bus->Mapper = mapper;
   mapper->Bus = bus;
+}
+
+void Bus_TriggerDMA(Bus_t *bus, uint8_t cpuPage)
+{
+  bus->DMA.ByteIndex = bus->PPU->OAMAddress;
+  bus->DMA.CPUBaseAddress = cpuPage << 8;
+  bus->DMA.NumTransfersComplete = 0;
+  bus->DMA.State = DMA_STATE_WAITING;
 }
 
 void Bus_TriggerNMI(Bus_t *bus)
@@ -110,7 +119,13 @@ void Bus_WriteFromCPU(Bus_t *bus, uint16_t address, uint8_t data)
   else if (address < 0x4018)
   {
     // APU + IO
-    if (address == 0x4016)
+    if (address == 0x4014)
+    {
+      // OAM DMA trigger
+      Bus_TriggerDMA(bus, data);
+    }
+    // Controllers
+    else if (address == 0x4016)
     {
       Controllers_Write(0, data);
     }

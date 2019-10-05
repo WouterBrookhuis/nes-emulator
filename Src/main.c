@@ -51,11 +51,15 @@ static void Event(SDL_Event* event);
 #define MEMORY_VIEW_ROWS    8
 #define MEMORY_VIEW_CHARS_PER_ROW   ((MEMORY_VIEW_COLUMNS - 1) * 3 + 2 + 6)
 
+#define OAM_VIEW_ENTRIES    22
+#define OAM_VIEW_CHARS_PER_ROW  25
+
 static Font_t _font;
 static char _statusBarBuffer[STATUS_BAR_CHARS_PER_ROW * STATUS_BAR_ROWS + 1];
 static char _textBuffer[128];
 static char _memTextBuffer[HALF_MEM_WINDOW_SIZE * 2 + 1][128];
 static char _memoryViewBuffer[MEMORY_VIEW_CHARS_PER_ROW * MEMORY_VIEW_ROWS + 1];
+static char _oamViewBuffer[OAM_VIEW_ENTRIES * OAM_VIEW_CHARS_PER_ROW + 1];
 static Mapper_t _mapper;
 static bool _stepKeyWasPressed;
 static bool _runKeyWasPressed;
@@ -417,6 +421,24 @@ static bool Update(float deltaTime)
     }
   }
 
+  memset(_oamViewBuffer, 0, sizeof(_oamViewBuffer));
+  for (int i = 0; i < OAM_VIEW_ENTRIES; i++)
+  {
+    OAMEntry_t *entry;
+
+    entry = &(ppu->OAM[i]);
+
+    snprintf(_oamViewBuffer + strlen(_oamViewBuffer),
+             sizeof(_oamViewBuffer) - strlen(_oamViewBuffer),
+             "%02d: %3d %3d T:0x%02X A:0x%02X",
+             i,
+             entry->X,
+             entry->Y,
+             entry->TileIndex,
+             entry->Attributes
+             );
+  }
+
   if (_runKeyWasPressed)
   {
     _run = !_run;
@@ -482,23 +504,37 @@ static void Draw(SDL_Surface* surface)
   Text_DrawStringWrapping(surface, _statusBarBuffer, 0, 0, STATUS_BAR_CHARS_PER_ROW, &_font);
 
   // Debug view
-  // Memory view
-  Text_DrawString(surface, "Memory view", nesScreenRect.w, STATUS_BAR_HEIGHT, &_font);
-  Text_DrawStringWrapping(surface,
-                           _memoryViewBuffer,
-                           nesScreenRect.w,
-                           STATUS_BAR_HEIGHT + _font.GlyphHeight,
-                           MEMORY_VIEW_CHARS_PER_ROW,
-                           &_font);
-  // PC memory area
-  Text_DrawString(surface, "Disassembler (WIP)", nesScreenRect.w, STATUS_BAR_HEIGHT + (2 + MEMORY_VIEW_ROWS) * _font.GlyphHeight, &_font);
-  for (int i = 0; i < HALF_MEM_WINDOW_SIZE * 2 + 1; i++)
+  if (_showCpu)
   {
-    Text_DrawString(surface,
-                    _memTextBuffer[i],
-                    nesScreenRect.w,
-                    STATUS_BAR_HEIGHT + _font.GlyphHeight * (i + 3 + MEMORY_VIEW_ROWS),
-                    &_font);
+    // Memory view
+    Text_DrawString(surface, "Memory view", nesScreenRect.w, STATUS_BAR_HEIGHT, &_font);
+    Text_DrawStringWrapping(surface,
+                             _memoryViewBuffer,
+                             nesScreenRect.w,
+                             STATUS_BAR_HEIGHT + _font.GlyphHeight,
+                             MEMORY_VIEW_CHARS_PER_ROW,
+                             &_font);
+    // PC memory area
+    Text_DrawString(surface, "Disassembler (WIP)", nesScreenRect.w, STATUS_BAR_HEIGHT + (2 + MEMORY_VIEW_ROWS) * _font.GlyphHeight, &_font);
+    for (int i = 0; i < HALF_MEM_WINDOW_SIZE * 2 + 1; i++)
+    {
+      Text_DrawString(surface,
+                      _memTextBuffer[i],
+                      nesScreenRect.w,
+                      STATUS_BAR_HEIGHT + _font.GlyphHeight * (i + 3 + MEMORY_VIEW_ROWS),
+                      &_font);
+    }
+  }
+  else
+  {
+    // OAM view
+    Text_DrawString(surface, "OAM view", nesScreenRect.w, STATUS_BAR_HEIGHT, &_font);
+    Text_DrawStringWrapping(surface,
+                            _oamViewBuffer,
+                            nesScreenRect.w,
+                            STATUS_BAR_HEIGHT + _font.GlyphHeight,
+                            OAM_VIEW_CHARS_PER_ROW,
+                            &_font);
   }
 
   // Pattern table output
