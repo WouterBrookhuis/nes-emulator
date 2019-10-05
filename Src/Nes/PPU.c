@@ -34,6 +34,12 @@
 #define STATFLAG_SPRITE_0_HIT         0x40
 #define STATFLAG_VBLANK               0x80
 
+#define ATTRFLAG_PALLETE_MASK         0x03
+#define ATTRFLAG_NOTHING_MASK         0x1C      // TODO: This needs to apply to OAM reads and writes as well
+#define ATTRFLAG_PRIORITY             0x20
+#define ATTRFLAG_FLIP_HORIZONTAL      0x40
+#define ATTRFLAG_FLIP_VERTICAL        0x80
+
 
 static SDL_Surface *_renderSurface;
 
@@ -111,6 +117,7 @@ void PPU_Initialize(PPU_t *ppu)
   ppu->VCount = -1;
 
   ppu->OAMAsPtr = (uint8_t *)&ppu->OAM;
+  ppu->ActiveSpriteOAMAsPtr = (uint8_t *)&ppu->ActiveSpriteOAM;
 }
 
 void PPU_Reset(PPU_t *ppu)
@@ -218,7 +225,7 @@ void PPU_Tick(PPU_t *ppu)
   // Visible scanlines and pre-render scanline
   if (ppu->VCount >= -1 && ppu->VCount <= 239)
   {
-    // Memory accessing to get data
+    // Memory accessing to get background data
     if ((ppu->HCount >= 1 && ppu->HCount <= 257) || (ppu->HCount >= 321 && ppu->HCount <= 337))
     {
       uint8_t pixelCycle = ppu->HCount % 8;
@@ -273,13 +280,184 @@ void PPU_Tick(PPU_t *ppu)
                                               + ((ppu->V >> 12) & 0x07) + 8);
       }
     }
+    else if (ppu->VCount >= 0 && ppu->HCount >= 1 && ppu->HCount <= 64)
+    {
+      // Sprite evaluation: Clear secondary OAM
+      uint8_t byte = (ppu->HCount - 1) / 2;
+
+      ppu->ActiveSpriteOAMAsPtr[byte] = 0xFF;
+    }
+    else if (ppu->VCount >= 0  && ppu->HCount >= 65 && ppu->HCount <= 256)
+    {
+      // Sprite evaluation: Actually evaluating
+      if (ppu->HCount == 65)
+      {
+        // Initialize ourselves
+        ppu->SpriteEval_SpriteByteIndex = 0;
+        ppu->SpriteEval_OAMSpriteIndex = 0;
+        ppu->SpriteEval_NumberOfSprites = 0;
+        ppu->SpriteEval_TempSpriteData = 0;
+        ppu->SpriteEval_State = SPRITE_EVAL_STATE_NEW_SPRITE;
+      }
+      if (ppu->HCount % 2 == 1)
+      {
+        // Read OAM on uneven cycles
+        ppu->SpriteEval_TempSpriteData = ppu->OAMAsPtr[ppu->SpriteEval_OAMSpriteIndex * 4
+                                                       + ppu->SpriteEval_SpriteByteIndex];
+      }
+      else
+      {
+        // Write secondary OAM
+        if (ppu->SpriteEval_NumberOfSprites < 8)
+        {
+          ppu->ActiveSpriteOAMAsPtr[ppu->SpriteEval_NumberOfSprites * 4
+                                    + ppu->SpriteEval_SpriteByteIndex] = ppu->SpriteEval_TempSpriteData;
+        }
+        else
+        {
+          // Read from secondary OAM, so just do nothing here
+        }
+
+        // Do logic after write
+        switch (ppu->SpriteEval_State)
+        {
+        case SPRITE_EVAL_STATE_NEW_SPRITE:
+          // New sprite, check if it is visible based on Y
+          // Note that we evaluate it as if it is displayed THIS line, even though
+          // it will be shown from the next line onwards
+          if (ppu->ActiveSpriteOAM[ppu->SpriteEval_NumberOfSprites].Y >= ppu->VCount
+              && ppu->ActiveSpriteOAM[ppu->SpriteEval_NumberOfSprites].Y < ppu->VCount + 8)
+          {
+            // It is visible, copy the rest of the data
+            ppu->SpriteEval_SpriteByteIndex++;
+            ppu->SpriteEval_State = SPRITE_EVAL_STATE_COPY_SPRITE;
+          }
+          else
+          {
+            // Not visible, check next sprite
+            ppu->SpriteEval_OAMSpriteIndex++;
+            if (ppu->SpriteEval_NumberOfSprites >= 64)
+            {
+              // Looped trough all sprites
+              ppu->SpriteEval_State = SPRITE_EVAL_STATE_END;
+            }
+          }
+          break;
+        case SPRITE_EVAL_STATE_COPY_SPRITE:
+          // Wait until everything has been copied
+          ppu->SpriteEval_SpriteByteIndex++;
+          if (ppu->SpriteEval_SpriteByteIndex >= 4)
+          {
+            ppu->SpriteEval_SpriteByteIndex = 0;
+
+            // All bytes copied, increment
+            ppu->SpriteEval_NumberOfSprites++;
+            ppu->SpriteEval_OAMSpriteIndex++;
+            if (ppu->SpriteEval_NumberOfSprites >= 64)
+            {
+              // Looped trough all sprites
+              ppu->SpriteEval_State = SPRITE_EVAL_STATE_END;
+            }
+            else if (ppu->SpriteEval_NumberOfSprites < 8)
+            {
+              // Find more sprites
+              ppu->SpriteEval_State = SPRITE_EVAL_STATE_NEW_SPRITE;
+            }
+            else
+            {
+              // Full
+              ppu->SpriteEval_State = SPRITE_EVAL_STATE_OVERFLOW;
+            }
+          }
+          break;
+        case SPRITE_EVAL_STATE_OVERFLOW:
+          // Overflow logic
+          // TODO: Sprite overflow
+          ppu->SpriteEval_State = SPRITE_EVAL_STATE_END;
+          break;
+        case SPRITE_EVAL_STATE_END:
+          // Ending state
+          break;
+        }
+      }
+    }
+    else if (ppu->HCount >= 257 && ppu->HCount <= 320)
+    {
+      // Sprite Evaluation: Sprite data loading for the next scanline
+      uint8_t pixelCycle = ppu->HCount % 8;
+      uint8_t spriteIndex = (ppu->HCount - 257) / 8;
+
+      if (pixelCycle == 1)
+      {
+        // Fetch garbage NT
+        Bus_ReadFromPPU(ppu->Bus, 0x2000 | (ppu->V & 0x0FFF));
+      }
+      else if (pixelCycle == 2)
+      {
+        // Move attribute to 'latch'
+        ppu->ActiveSpriteData[spriteIndex].Attributes = ppu->ActiveSpriteOAM[spriteIndex].Attributes;
+      }
+      else if (pixelCycle == 3)
+      {
+        // Fetch garbage AT
+        Bus_ReadFromPPU(ppu->Bus,
+                        0x23C0
+                        | (ppu->V & 0x0C00)
+                        | ((ppu->V >> 4) & 0x0038)
+                        | ((ppu->V >> 2) & 0x0007));
+        // Load X coordinate into latch
+        ppu->ActiveSpriteData[spriteIndex].X = ppu->ActiveSpriteOAM[spriteIndex].X;
+      }
+      else if (pixelCycle == 5)
+      {
+        // Fetch low sprite tile byte
+        ppu->ActiveSpriteData[spriteIndex].SRPatternLow =
+            Bus_ReadFromPPU(ppu->Bus,
+                            (IsFlagSet(&ppu->Ctrl, CTRLFLAG_SPRITE_ADDRESS) ? 0x1000 : 0x000)
+                            + ((uint16_t)ppu->ActiveSpriteOAM[spriteIndex].TileIndex << 4)
+                            + ((ppu->VCount - ppu->ActiveSpriteOAM[spriteIndex].Y) & 0x07) + 0);
+      }
+      else if (pixelCycle == 7)
+      {
+        // Fetch high sprite tile byte
+        ppu->ActiveSpriteData[spriteIndex].SRPatternHigh =
+            Bus_ReadFromPPU(ppu->Bus,
+                            (IsFlagSet(&ppu->Ctrl, CTRLFLAG_SPRITE_ADDRESS) ? 0x1000 : 0x000)
+                            + ((uint16_t)ppu->ActiveSpriteOAM[spriteIndex].TileIndex << 4)
+                            + ((ppu->VCount - ppu->ActiveSpriteOAM[spriteIndex].Y) & 0x07) + 8);
+      }
+    }
+
+    // Update shifters and counters
     if ((ppu->HCount >= 2 && ppu->HCount <= 257) || (ppu->HCount >= 322 && ppu->HCount <= 337))
     {
-      // Shift the shift registers
-      ppu->SRAttributeHigh <<= 1;
-      ppu->SRAttributeLow <<= 1;
-      ppu->SRPatternHigh <<= 1;
-      ppu->SRPatternLow <<= 1;
+      if (IsFlagSet(&ppu->Mask, MASKFLAG_BACKGROUND))
+      {
+        // Shift the shift registers
+        ppu->SRAttributeHigh <<= 1;
+        ppu->SRAttributeLow <<= 1;
+        ppu->SRPatternHigh <<= 1;
+        ppu->SRPatternLow <<= 1;
+      }
+
+      if (IsFlagSet(&ppu->Mask, MASKFLAG_SPRITES))
+      {
+        for (int i = 0; i < 8; i++)
+        {
+          if (ppu->ActiveSpriteData[i].X > 0)
+          {
+            // Decrement
+            ppu->ActiveSpriteData[i].X--;
+          }
+          else
+          {
+            // Shift registers to the side
+            // TODO: When a sprite is drawn at X = 0, this will happen 1 cycle too soon
+            ppu->ActiveSpriteData[i].SRPatternHigh <<= 1;
+            ppu->ActiveSpriteData[i].SRPatternLow <<= 1;
+          }
+        }
+      }
     }
   }
   // Post render scanline + 1
@@ -296,8 +474,15 @@ void PPU_Tick(PPU_t *ppu)
       }
     }
   }
+
   // Try to render a pixel
-  if (IsRendering(ppu))
+  uint8_t bgPixel = 0;
+  uint8_t bgPalette = 0;
+  uint8_t spPixel = 0;
+  uint8_t spPalette = 0;
+  uint8_t bgPriority = 0;
+
+  if (IsFlagSet(&ppu->Mask, MASKFLAG_BACKGROUND))
   {
     // Try to render a pixel, RenderPixel will deal with any out of bounds write attempts
     uint16_t pixelBit = (0x8000 >> ppu->X);
@@ -305,8 +490,63 @@ void PPU_Tick(PPU_t *ppu)
                     (((ppu->SRPatternHigh &  pixelBit) > 0) << 1);
     uint8_t palette = ((ppu->SRAttributeLow  & pixelBit) > 0) |
                       (((ppu->SRAttributeHigh &  pixelBit) > 0) << 1);
-    PPU_RenderPixel(ppu, ppu->HCount, ppu->VCount, pixel, palette);
+
+    bgPixel = pixel;
+    bgPalette = palette;
   }
+
+  bool isSpriteZero = false;
+
+  if (IsFlagSet(&ppu->Mask, MASKFLAG_SPRITES))
+  {
+    // Find a sprite pixel to draw
+    for (int i = 0; i < 8; i++)
+    {
+      if (ppu->ActiveSpriteData[i].X == 0)
+      {
+        uint8_t pixel = ((ppu->ActiveSpriteData[i].SRPatternLow & 0x80) > 0) |
+                        (((ppu->ActiveSpriteData[i].SRPatternHigh &  0x80) > 0) << 1);
+        // TODO: Fix the fucking palette
+        uint8_t palette = (ppu->ActiveSpriteData[i].Attributes & 0x03) + 4;
+
+        if (pixel != 0)
+        {
+          // Non-transparent pixel
+          spPixel = pixel;
+          spPalette = palette;
+          // TODO: Attributes
+          bgPriority = ppu->ActiveSpriteData[i].Attributes & ATTRFLAG_PRIORITY;
+          isSpriteZero = i == 0;
+          break;
+        }
+      }
+    }
+  }
+
+  // Find when we should display sprite instead of background
+  // I'm reusing the bgXXX variables for the final pixel and palette
+  if (bgPixel == 0 && spPixel != 0)
+  {
+    bgPixel = spPixel;
+    bgPalette = spPalette;
+  }
+  else if (bgPixel != 0 && spPixel != 0 && bgPriority == 0)
+  {
+    if (isSpriteZero && IsFlagSet(&ppu->Mask, MASKFLAG_BACKGROUND))
+    {
+      // Sprite zero hit wooo
+      // TODO: Partially hidden logic
+      if (ppu->HCount != 255 && ppu->HCount >= 2 && ppu->HCount <= 257)
+      {
+        SetFlag(&ppu->Status, STATFLAG_SPRITE_0_HIT, true);
+      }
+    }
+    bgPixel = spPixel;
+    bgPalette = spPalette;
+  }
+
+  // Render the pixel to the screen
+  PPU_RenderPixel(ppu, ppu->HCount, ppu->VCount, bgPixel, bgPalette);
 
   // Calculate next scanline position
   ppu->HCount++;

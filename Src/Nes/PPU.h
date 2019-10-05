@@ -24,6 +24,22 @@ typedef struct _OAMEntry_t
 } OAMEntry_t;
 #pragma pack(pop)
 
+typedef struct
+{
+  uint8_t X;
+  uint8_t SRPatternHigh;
+  uint8_t SRPatternLow;
+  uint8_t Attributes;
+} SpriteData_t;
+
+typedef enum
+{
+  SPRITE_EVAL_STATE_NEW_SPRITE,
+  SPRITE_EVAL_STATE_COPY_SPRITE,
+  SPRITE_EVAL_STATE_OVERFLOW,
+  SPRITE_EVAL_STATE_END
+} SpriteEvalState_t;
+
 typedef struct _PPU_t
 {
   unsigned int CycleCount;          // Total cycle count, debugging info
@@ -77,6 +93,14 @@ typedef struct _PPU_t
   OAMEntry_t OAM[64];       // Object Attribute Memory for storing sprite data
   uint8_t *OAMAsPtr;        // Pointer to OAM for indexing actions
 
+  OAMEntry_t ActiveSpriteOAM[8];      // OAM for sprites on current scanline
+  uint8_t *ActiveSpriteOAMAsPtr;      // Pointer to ActiveSpriteOAM
+  SpriteData_t ActiveSpriteData[8];   // Other data for sprites on current scanline
+  uint8_t SpriteEval_NumberOfSprites;
+  uint8_t SpriteEval_OAMSpriteIndex;
+  uint8_t SpriteEval_SpriteByteIndex;
+  uint8_t SpriteEval_TempSpriteData;
+  SpriteEvalState_t SpriteEval_State;
 } PPU_t;
 
 void PPU_Initialize(PPU_t *ppu);
