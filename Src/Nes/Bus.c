@@ -9,6 +9,7 @@
 #include "CPU.h"
 #include "PPU.h"
 #include "log.h"
+#include "Controllers.h"
 
 #include "Mapper.h"
 #include <string.h>
@@ -65,7 +66,18 @@ uint8_t Bus_ReadFromCPU(Bus_t *bus, uint16_t address)
   else if (address < 0x4018)
   {
     // APU + IO
-    data = 0;
+    if (address == 0x4016)
+    {
+      data = Controllers_ReadAndShiftState(0);
+    }
+    else if (address == 0x4017)
+    {
+      data = Controllers_ReadAndShiftState(1);
+    }
+    else
+    {
+      data = 0;
+    }
   }
   else if (address < 0x4020)
   {
@@ -98,6 +110,14 @@ void Bus_WriteFromCPU(Bus_t *bus, uint16_t address, uint8_t data)
   else if (address < 0x4018)
   {
     // APU + IO
+    if (address == 0x4016)
+    {
+      Controllers_Write(0, data);
+    }
+    else if (address == 0x4017)
+    {
+      Controllers_Write(1, data);
+    }
   }
   else if (address < 0x4020)
   {

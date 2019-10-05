@@ -488,7 +488,7 @@ void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data)
     // TODO: Weird glitches for writing to 0x2007 during rendering
     if (ppu->VCount >= 0 && ppu->VCount <= 241)
     {
-      LogMessage("Writing to PPU memory at line %d, 0x%04X (0x%04X) = 0x%02X", ppu->VCount, ppu->V, ppu->V & 0x3FFF, data);
+      //LogMessage("Writing to PPU memory at line %d, 0x%04X (0x%04X) = 0x%02X", ppu->VCount, ppu->V, ppu->V & 0x3FFF, data);
     }
     Bus_WriteFromPPU(ppu->Bus, ppu->V, data);
     ppu->V += IsFlagSet(&ppu->Ctrl, CTRLFLAG_VRAM_INCREMENT) ? 32 : 1;

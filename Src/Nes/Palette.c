@@ -39,7 +39,7 @@ void Palette_GetRGB(uint8_t index, uint8_t *r, uint8_t *g, uint8_t *b)
 {
   if (index >= PALETTE_ENTRIES)
   {
-    LogError("Palette index out of bounds: %d", index);
+    //LogError("Palette index out of bounds: %d", index);
     index = PALETTE_ENTRIES;
   }
   *r = _palette[index * 3];

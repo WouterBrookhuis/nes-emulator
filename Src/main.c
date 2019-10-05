@@ -17,6 +17,7 @@
 #include "Nes/InstructionTable.h"
 #include "Nes/Bus.h"
 #include "Nes/Palette.h"
+#include "Nes/Controllers.h"
 
 static void Initialize(void);
 
@@ -67,6 +68,7 @@ static SDL_Surface *_ppuRenderSurface;
 static uint8_t _patternTableDrawIndex = 2;
 static SDL_Surface *_ppuPatternTableSurfaces[2];
 
+static bool _controller1Buttons[NR_OF_NES_BUTTONS];
 
 int main(int argc, const char* argv[])
 {
@@ -76,6 +78,11 @@ int main(int argc, const char* argv[])
   sdlReturnCode = SharedSDL_Start();
 
   return sdlReturnCode;
+}
+
+static bool HandleButton(uint8_t controller, NESButton_t button)
+{
+  return _controller1Buttons[button];
 }
 
 static void DrawPalettes(Bus_t *bus, SDL_Surface *surface, int startX, int startY)
@@ -156,8 +163,8 @@ static void Initialize()
 {
   //const char * romFile = "Resources/all_instrs.nes";
   //const char * romFile = "Resources/official_only.nes";
-  //const char * romFile = "Resources/nestest.nes";
-  const char * romFile = "Resources/donkey kong.nes";
+  const char * romFile = "Resources/nestest.nes";
+  //const char * romFile = "Resources/donkey kong.nes";
   //const char * romFile = "Resources/super mario bros.nes";
   //const char * romFile = "Resources/vbl_clear_time.nes";
   //const char * romFile = "Resources/rom_singles/01-basics.nes";
@@ -184,6 +191,9 @@ static void Initialize()
   _ppuPatternTableSurfaces[0] = SDL_CreateRGBSurfaceWithFormat(0, 16 * 8, 16 * 8, 32, SDL_PIXELFORMAT_RGBA32);
   _ppuPatternTableSurfaces[1] = SDL_CreateRGBSurfaceWithFormat(0, 16 * 8, 16 * 8, 32, SDL_PIXELFORMAT_RGBA32);
 
+  // Hook up controllers to SDL
+  Controllers_SetButtonHandler(0, HandleButton);
+
   // Run first instruction
   cpu = NES_GetCPU();
   CPU_Reset(cpu);
@@ -196,6 +206,44 @@ static void Initialize()
 
 static void Event(SDL_Event* event)
 {
+  bool keyDown = event->type == SDL_KEYDOWN;
+
+  if (event->type == SDL_KEYDOWN || event->type == SDL_KEYUP)
+  {
+    if (event->key.keysym.sym == SDLK_z)
+    {
+      _controller1Buttons[NES_BUTTON_A] = keyDown;
+    }
+    else if (event->key.keysym.sym == SDLK_x)
+    {
+      _controller1Buttons[NES_BUTTON_B] = keyDown;
+    }
+    else if (event->key.keysym.sym == SDLK_BACKSPACE)
+    {
+      _controller1Buttons[NES_BUTTON_SELECT] = keyDown;
+    }
+    else if (event->key.keysym.sym == SDLK_RETURN)
+    {
+      _controller1Buttons[NES_BUTTON_START] = keyDown;
+    }
+    else if (event->key.keysym.sym == SDLK_UP)
+    {
+      _controller1Buttons[NES_BUTTON_UP] = keyDown;
+    }
+    else if (event->key.keysym.sym == SDLK_DOWN)
+    {
+      _controller1Buttons[NES_BUTTON_DOWN] = keyDown;
+    }
+    else if (event->key.keysym.sym == SDLK_LEFT)
+    {
+      _controller1Buttons[NES_BUTTON_LEFT] = keyDown;
+    }
+    else if (event->key.keysym.sym == SDLK_RIGHT)
+    {
+      _controller1Buttons[NES_BUTTON_RIGHT] = keyDown;
+    }
+  }
+
   if (event->type == SDL_KEYDOWN)
   {
     if (event->key.keysym.sym == SDLK_SPACE)
