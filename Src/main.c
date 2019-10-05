@@ -78,6 +78,40 @@ int main(int argc, const char* argv[])
   return sdlReturnCode;
 }
 
+static void DrawPalettes(Bus_t *bus, SDL_Surface *surface, int startX, int startY)
+{
+  // Draw all palette entries
+  uint8_t r;
+  uint8_t g;
+  uint8_t b;
+  uint16_t address = 0x3F00;
+  SDL_Rect rect;
+  SDL_Rect bgRect;
+
+  rect.w = 12;
+  rect.h = 12;
+  rect.x = startX;
+  rect.y = startY;
+
+  for (int i = 0; i < 8; i++)
+  {
+    bgRect.w = rect.w * 4 + 4;
+    bgRect.h = rect.h + 4;
+    bgRect.x = rect.x - 2;
+    bgRect.y = rect.y - 2;
+    SDL_FillRect(surface, &bgRect, SDL_MapRGB(surface->format, 255, 255, 255));
+    for (int c = 0; c < 4; c++)
+    {
+      uint8_t paletteValue = Bus_ReadFromPPU(bus, address + c);
+      Palette_GetRGB(paletteValue, &r, &g, &b);
+      SDL_FillRect(surface, &rect, SDL_MapRGB(surface->format, r, g, b));
+      rect.x += rect.w;
+    }
+    rect.x += 2;
+    address += 4;
+  }
+}
+
 static void DrawPatternTable(Bus_t *bus, uint16_t tableStart, SDL_Surface *surface)
 {
   uint8_t tileDataLow;
@@ -123,8 +157,8 @@ static void Initialize()
   //const char * romFile = "Resources/all_instrs.nes";
   //const char * romFile = "Resources/official_only.nes";
   //const char * romFile = "Resources/nestest.nes";
-  //const char * romFile = "Resources/donkey kong.nes";
-  const char * romFile = "Resources/super mario bros.nes";
+  const char * romFile = "Resources/donkey kong.nes";
+  //const char * romFile = "Resources/super mario bros.nes";
   //const char * romFile = "Resources/vbl_clear_time.nes";
   //const char * romFile = "Resources/rom_singles/01-basics.nes";
   const char * paletteFile = "Resources/ntscpalette.pal";
@@ -464,6 +498,9 @@ static void Draw(SDL_Surface* surface)
     SDL_BlitScaled(_ppuPatternTableSurfaces[_patternTableDrawIndex], &srcRect,
                     surface, &dstRect);
   }
+
+  // Palette output
+  DrawPalettes(NES_GetBus(), surface, nesScreenRect.w, FONT_SIZE * 29 + 3);
 
   // Debug: state
   Text_DrawString(surface, _run ? "Running" : "Stopped", 0, surface->h - _font.GlyphHeight, &_font);
