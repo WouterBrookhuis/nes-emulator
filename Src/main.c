@@ -53,7 +53,6 @@ static void Event(SDL_Event* event);
 
 static Font_t _font;
 static char _statusBarBuffer[STATUS_BAR_CHARS_PER_ROW * STATUS_BAR_ROWS + 1];
-static char _logBuffer[2048];
 static char _textBuffer[128];
 static char _memTextBuffer[HALF_MEM_WINDOW_SIZE * 2 + 1][128];
 static char _memoryViewBuffer[MEMORY_VIEW_CHARS_PER_ROW * MEMORY_VIEW_ROWS + 1];
@@ -163,8 +162,8 @@ static void Initialize()
 {
   //const char * romFile = "Resources/all_instrs.nes";
   //const char * romFile = "Resources/official_only.nes";
-  const char * romFile = "Resources/nestest.nes";
-  //const char * romFile = "Resources/donkey kong.nes";
+  //const char * romFile = "Resources/nestest.nes";
+  const char * romFile = "Resources/donkey kong.nes";
   //const char * romFile = "Resources/super mario bros.nes";
   //const char * romFile = "Resources/vbl_clear_time.nes";
   //const char * romFile = "Resources/rom_singles/01-basics.nes";
@@ -452,23 +451,6 @@ static bool Update(float deltaTime)
     }
   }
 
-  if (Bus_ReadFromCPU(bus, 0x6001) == 0xDE &&
-      Bus_ReadFromCPU(bus, 0x6002) == 0xB0 &&
-      Bus_ReadFromCPU(bus, 0x6003) == 0x61)
-  {
-    // Cpu test text is available to read
-    memset(_logBuffer, 0, sizeof(_logBuffer));
-    memAddress = 0x6004;
-    uint8_t data;
-    uint16_t offset = 0;
-    while ((data = Bus_ReadFromCPU(bus, memAddress + offset)) != 0x00 && offset < sizeof(_logBuffer))
-    {
-      _logBuffer[offset] = (char)data;
-      offset++;
-    }
-    _logBuffer[sizeof(_logBuffer) - 1] = 0x00;
-  }
-
   // Draw pattern tables AFTER rendering
   if (_patternTableDrawIndex < 2)
   {
@@ -482,7 +464,6 @@ static void Draw(SDL_Surface* surface)
 {
   SDL_Rect nesInternalRect;
   SDL_Rect nesScreenRect;
-  uint32_t color;
 
   // Nes screen output
   nesInternalRect.w = _ppuRenderSurface->w;
@@ -519,11 +500,6 @@ static void Draw(SDL_Surface* surface)
                     STATUS_BAR_HEIGHT + _font.GlyphHeight * (i + 3 + MEMORY_VIEW_ROWS),
                     &_font);
   }
-
-
-
-
-  Text_DrawStringWrapping(surface, _logBuffer, 0, 288, surface->w / _font.GlyphWidth, &_font);
 
   // Pattern table output
   if (_patternTableDrawIndex < 2)
