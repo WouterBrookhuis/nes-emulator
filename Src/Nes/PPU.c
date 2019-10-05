@@ -40,8 +40,18 @@
 #define ATTRFLAG_FLIP_HORIZONTAL      0x40
 #define ATTRFLAG_FLIP_VERTICAL        0x80
 
+static uint8_t BIT_REVERSE_TABLE[16] =
+{
+    0b0000, 0b1000, 0b0100, 0b1100, 0b0010, 0b1010, 0b0110, 0b1110,
+    0b0001, 0b1001, 0b0101, 0b1101, 0b0011, 0b1011, 0b0111, 0b1111
+};
 
 static SDL_Surface *_renderSurface;
+
+static inline uint8_t ReverseByte(uint8_t byte)
+{
+  return ((BIT_REVERSE_TABLE[byte & 0xF] << 4) | (BIT_REVERSE_TABLE[byte >> 4]));
+}
 
 static inline bool IsFlagSet(const uint8_t *P, uint8_t flag)
 {
@@ -280,7 +290,8 @@ void PPU_Tick(PPU_t *ppu)
                                               + ((ppu->V >> 12) & 0x07) + 8);
       }
     }
-    else if (ppu->VCount >= 0 && ppu->HCount >= 1 && ppu->HCount <= 64)
+
+    if (ppu->VCount >= 0 && ppu->HCount >= 1 && ppu->HCount <= 64)
     {
       // Sprite evaluation: Clear secondary OAM
       uint8_t byte = (ppu->HCount - 1) / 2;
@@ -325,8 +336,8 @@ void PPU_Tick(PPU_t *ppu)
           // New sprite, check if it is visible based on Y
           // Note that we evaluate it as if it is displayed THIS line, even though
           // it will be shown from the next line onwards
-          if (ppu->ActiveSpriteOAM[ppu->SpriteEval_NumberOfSprites].Y >= ppu->VCount
-              && ppu->ActiveSpriteOAM[ppu->SpriteEval_NumberOfSprites].Y < ppu->VCount + 8)
+          if (ppu->VCount >= ppu->ActiveSpriteOAM[ppu->SpriteEval_NumberOfSprites].Y
+              && ppu->VCount < ppu->ActiveSpriteOAM[ppu->SpriteEval_NumberOfSprites].Y + 8)
           {
             // It is visible, copy the rest of the data
             ppu->SpriteEval_SpriteByteIndex++;
@@ -350,10 +361,15 @@ void PPU_Tick(PPU_t *ppu)
           {
             ppu->SpriteEval_SpriteByteIndex = 0;
 
+            if (ppu->ActiveSpriteOAM[ppu->SpriteEval_NumberOfSprites].TileIndex == 0xA2)
+            {
+              LogMessage("Log is the message");
+            }
+
             // All bytes copied, increment
             ppu->SpriteEval_NumberOfSprites++;
             ppu->SpriteEval_OAMSpriteIndex++;
-            if (ppu->SpriteEval_NumberOfSprites >= 64)
+            if (ppu->SpriteEval_OAMSpriteIndex >= 64)
             {
               // Looped trough all sprites
               ppu->SpriteEval_State = SPRITE_EVAL_STATE_END;
@@ -381,7 +397,7 @@ void PPU_Tick(PPU_t *ppu)
         }
       }
     }
-    else if (ppu->HCount >= 257 && ppu->HCount <= 320)
+    if (ppu->HCount >= 257 && ppu->HCount <= 320)
     {
       // Sprite Evaluation: Sprite data loading for the next scanline
       uint8_t pixelCycle = ppu->HCount % 8;
@@ -425,6 +441,13 @@ void PPU_Tick(PPU_t *ppu)
                             (IsFlagSet(&ppu->Ctrl, CTRLFLAG_SPRITE_ADDRESS) ? 0x1000 : 0x000)
                             + ((uint16_t)ppu->ActiveSpriteOAM[spriteIndex].TileIndex << 4)
                             + ((ppu->VCount - ppu->ActiveSpriteOAM[spriteIndex].Y) & 0x07) + 8);
+
+        // Do horizontal mirroring
+        if (ppu->ActiveSpriteData[spriteIndex].Attributes & ATTRFLAG_FLIP_HORIZONTAL)
+        {
+          ppu->ActiveSpriteData[spriteIndex].SRPatternLow = ReverseByte(ppu->ActiveSpriteData[spriteIndex].SRPatternLow);
+          ppu->ActiveSpriteData[spriteIndex].SRPatternHigh = ReverseByte(ppu->ActiveSpriteData[spriteIndex].SRPatternHigh);
+        }
       }
     }
 

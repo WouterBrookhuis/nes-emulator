@@ -80,7 +80,7 @@ uint8_t Controllers_ReadAndShiftState(uint8_t controllerIndex)
   result = _controllers[controllerIndex].Data & 0x01;
   _controllers[controllerIndex].Data >>= 1;
   // NES controllers will return 1 after reading all bits, so set the MSB
-  _controllers[controllerIndex].Data |= 0x80;
+  //_controllers[controllerIndex].Data |= 0x80;
 
   return result;
 }
