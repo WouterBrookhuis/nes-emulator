@@ -42,6 +42,7 @@ typedef enum
 
 typedef struct _PPU_t
 {
+  unsigned int FrameCount;
   unsigned int CycleCount;          // Total cycle count, debugging info
   unsigned int CyclesSinceReset;    // Amount of cycles since last reset
   Bus_t *Bus;               // The bus this PPU is connected to

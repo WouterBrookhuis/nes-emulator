@@ -167,8 +167,8 @@ static void Initialize()
   //const char * romFile = "Resources/all_instrs.nes";
   //const char * romFile = "Resources/official_only.nes";
   //const char * romFile = "Resources/nestest.nes";
-  //const char * romFile = "Resources/donkey kong.nes";
-  const char * romFile = "Resources/super mario bros.nes";
+  const char * romFile = "Resources/donkey kong.nes";
+  //const char * romFile = "Resources/super mario bros.nes";
   //const char * romFile = "Resources/vbl_clear_time.nes";
   //const char * romFile = "Resources/rom_singles/01-basics.nes";
   const char * paletteFile = "Resources/ntscpalette.pal";
@@ -367,11 +367,12 @@ static bool Update(float deltaTime)
     // Second row: PPU status
     snprintf(&_statusBarBuffer[STATUS_BAR_CHARS_PER_ROW],
             STATUS_BAR_CHARS_PER_ROW + 1,
-            "H:%03d V:%03d CTRL:%02X STAT:%02X",
+            "H:%03d V:%03d CTRL:%02X STAT:%02X FRAME:%d",
             ppu->HCount,
             ppu->VCount,
             ppu->Ctrl,
-            ppu->Status
+            ppu->Status,
+            ppu->FrameCount
             );
   }
 

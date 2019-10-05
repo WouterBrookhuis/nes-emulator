@@ -562,6 +562,7 @@ void PPU_Tick(PPU_t *ppu)
     {
       ppu->VCount = -1;
       ppu->IsEvenFrame = !ppu->IsEvenFrame;
+      ppu->FrameCount++;
     }
   }
 }
