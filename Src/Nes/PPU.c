@@ -229,7 +229,7 @@ void PPU_Tick(PPU_t *ppu)
           ppu->SRPatternLow =     (ppu->SRPatternLow & 0xFF00)    | (ppu->NextBgTileLow);
           ppu->SRPatternHigh =    (ppu->SRPatternHigh & 0xFF00)   | (ppu->NextBgTileHigh);
           ppu->SRAttributeLow =   (ppu->SRAttributeLow & 0xFF00)  | (ppu->NextBgAttribute & 0x01 ? 0xFF : 0x00);
-          ppu->SRAttributeHigh =  (ppu->SRAttributeHigh & 0xFF00) | (ppu->NextBgAttribute & 0x10 ? 0xFF : 0x00);
+          ppu->SRAttributeHigh =  (ppu->SRAttributeHigh & 0xFF00) | (ppu->NextBgAttribute & 0x02 ? 0xFF : 0x00);
         }
         // Fetch NT
         ppu->NextBgTileId = Bus_ReadFromPPU(ppu->Bus, 0x2000 | (ppu->V & 0x0FFF));
