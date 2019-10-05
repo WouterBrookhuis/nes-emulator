@@ -361,11 +361,6 @@ void PPU_Tick(PPU_t *ppu)
           {
             ppu->SpriteEval_SpriteByteIndex = 0;
 
-            if (ppu->ActiveSpriteOAM[ppu->SpriteEval_NumberOfSprites].TileIndex == 0xA2)
-            {
-              LogMessage("Log is the message");
-            }
-
             // All bytes copied, increment
             ppu->SpriteEval_NumberOfSprites++;
             ppu->SpriteEval_OAMSpriteIndex++;
@@ -463,7 +458,7 @@ void PPU_Tick(PPU_t *ppu)
         ppu->SRPatternLow <<= 1;
       }
 
-      if (IsFlagSet(&ppu->Mask, MASKFLAG_SPRITES))
+      if (IsFlagSet(&ppu->Mask, MASKFLAG_SPRITES) && (ppu->HCount >= 2 && ppu->HCount <= 257))
       {
         for (int i = 0; i < 8; i++)
         {
