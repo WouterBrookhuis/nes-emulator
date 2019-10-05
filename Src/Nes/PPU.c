@@ -67,6 +67,10 @@ void PPU_RenderPixel(PPU_t *ppu, int x, int y, uint8_t pixel, uint8_t palette)
   }
 
   uint8_t colorPaletteIndex = Bus_ReadFromPPU(ppu->Bus, 0x3F00 + (palette << 2) + pixel);
+  if (IsFlagSet(&ppu->Mask, MASKFLAG_GREYSCALE))
+  {
+    colorPaletteIndex &= 0x30;
+  }
 
   if (x < 0 || x >= _renderSurface->w || y < 0 || y >= _renderSurface->h)
   {
@@ -172,7 +176,7 @@ void PPU_Tick(PPU_t *ppu)
 
   // Do PPU things
   // Address increment things
-  if (IsRendering(ppu))
+  if (IsRendering(ppu) && ppu->VCount >= -1 && ppu->VCount <= 239)
   {
     if (ppu->HCount == 256)
     {
@@ -376,7 +380,6 @@ uint8_t PPU_ReadFromCpu(PPU_t *ppu, uint16_t address)
     if (ppu->V >= 0x3F00)
     {
       result = ppu->DataBuffer;
-      // TODO: DataBuffer should be filled with nametable data 'underneath' palette
       ppu->DataBuffer = Bus_ReadFromPPU(ppu->Bus, ppu->V - 0x1000);
     }
     // The vram address always gets incremented on reading
@@ -483,6 +486,10 @@ void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data)
   case 0x0007:
     // Data
     // TODO: Weird glitches for writing to 0x2007 during rendering
+    if (ppu->VCount >= 0 && ppu->VCount <= 241)
+    {
+      LogMessage("Writing to PPU memory at line %d, 0x%04X (0x%04X) = 0x%02X", ppu->VCount, ppu->V, ppu->V & 0x3FFF, data);
+    }
     Bus_WriteFromPPU(ppu->Bus, ppu->V, data);
     ppu->V += IsFlagSet(&ppu->Ctrl, CTRLFLAG_VRAM_INCREMENT) ? 32 : 1;
     break;
