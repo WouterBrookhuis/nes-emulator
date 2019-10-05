@@ -109,6 +109,8 @@ void PPU_Initialize(PPU_t *ppu)
   ppu->Data = 0x00;
 
   ppu->VCount = -1;
+
+  ppu->OAMAsPtr = (uint8_t *)&ppu->OAM;
 }
 
 void PPU_Reset(PPU_t *ppu)
@@ -355,12 +357,11 @@ uint8_t PPU_ReadFromCpu(PPU_t *ppu, uint16_t address)
     return result;
   case 0x0003:
     // OAMAddress
-    LogError("Trying to access OAM");
     return ppu->LatchedData;
   case 0x0004:
     // OAMData
-    LogError("Trying to access OAM");
-    return ppu->OAMData;
+    // Just read the OAM from the current address
+    return ppu->OAMAsPtr[ppu->OAMAddress];
     break;
   case 0x0005:
     // Scroll
@@ -400,7 +401,7 @@ void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data)
   if (address == 0x4014)
   {
     // TODO: Do we want this here?
-    LogError("Trying to access OAM");
+    LogError("Trying to trigger OAM DMA");
     return;
   }
 
@@ -432,13 +433,22 @@ void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data)
     break;
   case 0x0003:
     // OAMAddress
-    LogError("Trying to access OAM");
     ppu->OAMAddress = data;
     break;
   case 0x0004:
     // OAMData
-    LogError("Trying to access OAM");
-    // TODO: Implement glitches
+    if (IsRendering(ppu) && ppu->VCount >= -1 && ppu->VCount <= 239)
+    {
+      // TODO: Behaviour emulation for writes during rendering
+      LogWarning("Ignoring OAM Data write during rendering");
+    }
+    else
+    {
+      // Just write to the OAM at the current address
+      ppu->OAMAsPtr[ppu->OAMAddress] = data;
+      // Writing also increments OAM Address by one, reading does not
+      ppu->OAMAddress++;
+    }
     break;
   case 0x0005:
     // Scroll

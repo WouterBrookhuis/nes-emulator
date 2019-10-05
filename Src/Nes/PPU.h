@@ -14,32 +14,41 @@
 
 typedef struct _Bus_t Bus_t;
 
+#pragma pack(push, 1)
+typedef struct _OAMEntry_t
+{
+  uint8_t Y;                // Y coordinate of top of sprite
+  uint8_t TileIndex;        // Tile index
+  uint8_t Attributes;       // Attributes for the sprite
+  uint8_t X;                // X coordinate of left of sprite
+} OAMEntry_t;
+#pragma pack(pop)
+
 typedef struct _PPU_t
 {
   unsigned int CycleCount;          // Total cycle count, debugging info
   unsigned int CyclesSinceReset;    // Amount of cycles since last reset
-  Bus_t *Bus;
+  Bus_t *Bus;               // The bus this PPU is connected to
 
   // Registers
-  uint8_t Ctrl;
-  uint8_t Mask;
-  uint8_t Status;
-  uint8_t OAMAddress;
-  uint8_t OAMData;
-  uint8_t Scroll;
-  //uint8_t Address;
-  uint8_t Data;
-  uint8_t OAMDma;
+  uint8_t Ctrl;             // Control register, various things
+  uint8_t Mask;             // Mask register, rendering related flags
+  uint8_t Status;           // Status register, has PPU status flags
+  uint8_t OAMAddress;       // Address used for OAM access
+  uint8_t OAMData;          // Data register used to read or write data to OAM
+  uint8_t Scroll;           // Scroll register, used for writing scroll offsets
+  uint8_t Data;             // Data register used for read/write via PPU bus from CPU
 
   // Wonky things
-  uint8_t AddressLatch;
-  uint8_t DataBuffer;
-  uint8_t LatchedData;
+  uint8_t AddressLatch;     // Address latch for '16 bit' registers like Address and Scroll
+  uint8_t DataBuffer;       // Buffer for Data register reads (they are delayed)
+  uint8_t LatchedData;      // Represents data lines still having the previous values when
+                            // reading from non readable registers (it returns this instead)
 
   // Frame lines
-  int VCount;
-  int HCount;
-  bool IsEvenFrame;
+  int VCount;               // Scanline, pre-render is -1
+  int HCount;               // Dot (or pixel) horizontally on the scanline, starts at 0
+  bool IsEvenFrame;         // Toggle indicating if we are on an odd or even frame
 
   // VRAM Address Registers
   // V and T have the same internal structure
@@ -63,6 +72,10 @@ typedef struct _PPU_t
   uint8_t NextBgAttribute;
   uint8_t NextBgTileLow;
   uint8_t NextBgTileHigh;
+
+  // OAM
+  OAMEntry_t OAM[64];       // Object Attribute Memory for storing sprite data
+  uint8_t *OAMAsPtr;        // Pointer to OAM for indexing actions
 
 } PPU_t;
 
