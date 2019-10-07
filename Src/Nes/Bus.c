@@ -44,7 +44,6 @@ void Bus_SetMapper(Bus_t *bus, Mapper_t *mapper)
 
 void Bus_TriggerDMA(Bus_t *bus, uint8_t cpuPage)
 {
-  bus->DMA.ByteIndex = bus->PPU->OAMAddress;
   bus->DMA.CPUBaseAddress = cpuPage << 8;
   bus->DMA.NumTransfersComplete = 0;
   bus->DMA.State = DMA_STATE_WAITING;

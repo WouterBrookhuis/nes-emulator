@@ -298,7 +298,8 @@ void PPU_Tick(PPU_t *ppu)
 
       ppu->ActiveSpriteOAMAsPtr[byte] = 0xFF;
     }
-    else if (ppu->VCount >= 0  && ppu->HCount >= 65 && ppu->HCount <= 256)
+
+    if (ppu->VCount >= 0  && ppu->HCount >= 65 && ppu->HCount <= 256)
     {
       // Sprite evaluation: Actually evaluating
       if (ppu->HCount == 65)
@@ -347,7 +348,7 @@ void PPU_Tick(PPU_t *ppu)
           {
             // Not visible, check next sprite
             ppu->SpriteEval_OAMSpriteIndex++;
-            if (ppu->SpriteEval_NumberOfSprites >= 64)
+            if (ppu->SpriteEval_OAMSpriteIndex >= 64)
             {
               // Looped trough all sprites
               ppu->SpriteEval_State = SPRITE_EVAL_STATE_END;
@@ -392,11 +393,15 @@ void PPU_Tick(PPU_t *ppu)
         }
       }
     }
+
     if (ppu->HCount >= 257 && ppu->HCount <= 320)
     {
       // Sprite Evaluation: Sprite data loading for the next scanline
       uint8_t pixelCycle = ppu->HCount % 8;
       uint8_t spriteIndex = (ppu->HCount - 257) / 8;
+
+      // Reset OAM address
+      ppu->OAMAddress = 0;
 
       if (pixelCycle == 1)
       {

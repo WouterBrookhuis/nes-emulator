@@ -27,7 +27,6 @@ typedef struct _DMA_t
   DMA_State_t State;
   uint16_t CPUBaseAddress;
   uint16_t NumTransfersComplete;
-  uint8_t ByteIndex;
   uint8_t Data;
 } DMA_t;
 

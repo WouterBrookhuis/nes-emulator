@@ -11,6 +11,7 @@
 #include "Bus.h"
 #include "PPU.h"
 #include "Controllers.h"
+#include "log.h"
 
 static int _clockCycleCount;
 static int _cpuClockDivisor;
@@ -61,14 +62,13 @@ void NES_TickClock(void)
       if (_isEvenCpuCycle)
       {
         // Read from cpu
-        _bus.DMA.Data = Bus_ReadFromCPU(&_bus, _bus.DMA.CPUBaseAddress + _bus.DMA.ByteIndex);
+        _bus.DMA.Data = Bus_ReadFromCPU(&_bus, _bus.DMA.CPUBaseAddress + _bus.DMA.NumTransfersComplete);
       }
       else
       {
         // Write to PPU OAM via OAMDATA register
         PPU_WriteFromCpu(&_ppu, 0x2004, _bus.DMA.Data);
 
-        _bus.DMA.ByteIndex++;
         _bus.DMA.NumTransfersComplete++;
 
         if (_bus.DMA.NumTransfersComplete == 256)
