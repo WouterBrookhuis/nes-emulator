@@ -62,6 +62,7 @@ typedef struct _PPU_t
   uint8_t LatchedData;      // Represents data lines still having the previous values when
                             // reading from non readable registers (it returns this instead)
   uint8_t SuppressVBlank;   // Used to suppress VBlank if STATUS is read shortly before it is set
+  uint8_t SuppressNMI;      // Used to suppress automatic VBlank NMI if STATUS is read shortly before VBLANK is set
 
   // Frame lines
   int VCount;               // Scanline, pre-render is -1

@@ -492,7 +492,7 @@ void PPU_Tick(PPU_t *ppu)
       if (ppu->SuppressVBlank == 0)
       {
         SetFlag(&ppu->Status, STATFLAG_VBLANK, true);
-        if (IsFlagSet(&ppu->Ctrl, CTRLFLAG_VBLANK_NMI))
+        if (IsFlagSet(&ppu->Ctrl, CTRLFLAG_VBLANK_NMI) && ppu->SuppressNMI == 0)
         {
           // Trigger the NMI here as well
           Bus_TriggerNMI(ppu->Bus);
@@ -585,7 +585,7 @@ void PPU_Tick(PPU_t *ppu)
   // However, on uneven frames with rendering enabled we skip the last cycle of
   // the pre-render scanline (-1 here)
   if (ppu->HCount == 341 ||
-      (!ppu->IsEvenFrame && IsRendering(ppu) && ppu->HCount == 340 && ppu->VCount == -1))
+      (!ppu->IsEvenFrame && IsFlagSet(&ppu->Mask, MASKFLAG_BACKGROUND) && ppu->HCount == 340 && ppu->VCount == -1))
   {
     ppu->HCount = 0;
     ppu->VCount++;
@@ -663,6 +663,7 @@ uint8_t PPU_ReadFromCpu(PPU_t *ppu, uint16_t address)
 
 void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data)
 {
+  bool wasNMIFlagSet;
   uint16_t wrappedAddress = address & 0x0007;
 
   // Update the latched data on any write
@@ -672,6 +673,8 @@ void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data)
   {
   case 0x0000:
     // Ctrl
+    wasNMIFlagSet = IsFlagSet(&ppu->Ctrl, CTRLFLAG_VBLANK_NMI);
+
     ppu->Ctrl = data;
     // Update temp register with nametable info
     // Bits 10-11 are the ones we need
@@ -679,7 +682,7 @@ void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data)
 
     // If we are in VBLANK and the vblank status flag is still set, then enabling the NMI
     // here will instantly trigger it
-    if (IsFlagSet(&ppu->Status, STATFLAG_VBLANK) && IsFlagSet(&ppu->Ctrl, CTRLFLAG_VBLANK_NMI))
+    if (!wasNMIFlagSet && IsFlagSet(&ppu->Status, STATFLAG_VBLANK) && IsFlagSet(&ppu->Ctrl, CTRLFLAG_VBLANK_NMI))
     {
       Bus_TriggerNMI(ppu->Bus);
     }
