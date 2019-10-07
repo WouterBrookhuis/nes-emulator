@@ -61,6 +61,7 @@ typedef struct _PPU_t
   uint8_t DataBuffer;       // Buffer for Data register reads (they are delayed)
   uint8_t LatchedData;      // Represents data lines still having the previous values when
                             // reading from non readable registers (it returns this instead)
+  uint8_t SuppressVBlank;   // Used to suppress VBlank if STATUS is read shortly before it is set
 
   // Frame lines
   int VCount;               // Scanline, pre-render is -1

@@ -489,13 +489,21 @@ void PPU_Tick(PPU_t *ppu)
     if (ppu->HCount == 1)
     {
       // Set VBLANK flag here
-      SetFlag(&ppu->Status, STATFLAG_VBLANK, true);
-      if (IsFlagSet(&ppu->Ctrl, CTRLFLAG_VBLANK_NMI))
+      if (ppu->SuppressVBlank == 0)
       {
-        // Trigger the NMI here as well
-        Bus_TriggerNMI(ppu->Bus);
+        SetFlag(&ppu->Status, STATFLAG_VBLANK, true);
+        if (IsFlagSet(&ppu->Ctrl, CTRLFLAG_VBLANK_NMI))
+        {
+          // Trigger the NMI here as well
+          Bus_TriggerNMI(ppu->Bus);
+        }
       }
     }
+  }
+  // Decrement the VBlank suppression counter
+  if (ppu->SuppressVBlank > 0)
+  {
+    ppu->SuppressVBlank--;
   }
 
   // Try to render a pixel
@@ -611,6 +619,8 @@ uint8_t PPU_ReadFromCpu(PPU_t *ppu, uint16_t address)
     ppu->AddressLatch = 0;
     // Update latched data since this is a proper read
     ppu->LatchedData = result;
+    // Suppress VBlank being set automatically for a certain amount of cycles
+    ppu->SuppressVBlank = 1;
     return result;
   case 0x0003:
     // OAMAddress

@@ -169,8 +169,9 @@ static void Initialize()
   //const char * romFile = "Resources/nestest.nes";
   //const char * romFile = "Resources/donkey kong.nes";
   //const char * romFile = "Resources/super mario bros.nes";
-  const char * romFile = "Resources/sprite_ram.nes";
+  //const char * romFile = "Resources/vram_access.nes";
   //const char * romFile = "Resources/rom_singles/01-basics.nes";
+  const char * romFile = "Resources/ppu_vbl_nmi/rom_singles/02-vbl_set_time.nes";
   const char * paletteFile = "Resources/ntscpalette.pal";
   Bus_t *bus;
   CPU_t *cpu;
