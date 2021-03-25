@@ -24,8 +24,8 @@ static bool _isEvenCpuCycle;
 
 void NES_Initialize(void)
 {
-  _cpuClockDivisor = 12;  // NTSC mode
-  _ppuClockDivisor = 4;   // NTSC mode
+  _cpuClockDivisor = 3; //12;  // NTSC mode
+  _ppuClockDivisor = 1; //4;   // NTSC mode
   _clockCycleCount = 0;
 
   CPU_Initialize(&_cpu);
