@@ -49,9 +49,9 @@ void Bus_TriggerDMA(Bus_t *bus, uint8_t cpuPage)
   bus->DMA.State = DMA_STATE_WAITING;
 }
 
-void Bus_TriggerNMI(Bus_t *bus)
+void Bus_TriggerNMI(Bus_t *bus, uint8_t delay)
 {
-  CPU_NMI(bus->CPU);
+  CPU_NMI(bus->CPU, delay);
 }
 
 uint8_t Bus_ReadFromCPU(Bus_t *bus, uint16_t address)

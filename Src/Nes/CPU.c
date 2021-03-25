@@ -33,9 +33,9 @@ void CPU_Reset(CPU_t *cpu)
   cpu->P = 0x24;
 }
 
-void CPU_NMI(CPU_t *cpu)
+void CPU_NMI(CPU_t *cpu, uint8_t delay)
 {
-  cpu->PendingNMI = true;
+  cpu->PendingNMI = delay + 1;
 }
 
 void CPU_Tick(CPU_t *cpu)
@@ -55,7 +55,7 @@ void CPU_Tick(CPU_t *cpu)
 
   if (cpu->CyclesLeftForInstruction == 0)
   {
-    if (cpu->PendingNMI)
+    if (cpu->PendingNMI == 1)
     {
       // NMI takes priority over other things
       // Push PC (hi, then low)
@@ -74,10 +74,14 @@ void CPU_Tick(CPU_t *cpu)
       // NMI takes 7 cycles
       cpu->CyclesLeftForInstruction = 7;
 
-      cpu->PendingNMI = false;
+      cpu->PendingNMI = 0;
     }
     else
     {
+      // Decrement the NMI counter
+      if (cpu->PendingNMI > 0)
+        cpu->PendingNMI--;
+
       // Time for a new instruction!
       cpu->Address = cpu->PC;
       cpu->Instruction = Bus_ReadFromCPU(cpu->Bus, cpu->PC);

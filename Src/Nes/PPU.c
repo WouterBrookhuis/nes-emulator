@@ -495,7 +495,7 @@ void PPU_Tick(PPU_t *ppu)
         if (IsFlagSet(&ppu->Ctrl, CTRLFLAG_VBLANK_NMI) && ppu->SuppressNMI == 0)
         {
           // Trigger the NMI here as well
-          Bus_TriggerNMI(ppu->Bus);
+          Bus_TriggerNMI(ppu->Bus, 0);
         }
       }
     }
@@ -684,7 +684,7 @@ void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data)
     // here will instantly trigger it
     if (!wasNMIFlagSet && IsFlagSet(&ppu->Status, STATFLAG_VBLANK) && IsFlagSet(&ppu->Ctrl, CTRLFLAG_VBLANK_NMI))
     {
-      Bus_TriggerNMI(ppu->Bus);
+      Bus_TriggerNMI(ppu->Bus, 1);
     }
     break;
   case 0x0001:

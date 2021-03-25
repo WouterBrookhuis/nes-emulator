@@ -40,7 +40,7 @@ typedef struct _Bus_t
 
 void Bus_TriggerDMA(Bus_t *bus, uint8_t cpuPage);
 
-void Bus_TriggerNMI(Bus_t *bus);
+void Bus_TriggerNMI(Bus_t *bus, uint8_t delay);
 
 void Bus_Initialize(Bus_t *bus, CPU_t *cpu, PPU_t *ppu);
 
