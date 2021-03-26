@@ -39,11 +39,13 @@ void NES_Initialize(void)
 
 void NES_TickClock(void)
 {
-  if (_clockCycleCount % _ppuClockDivisor == 0)
+  bool ppuTick = (_clockCycleCount % _ppuClockDivisor == 0);
+  bool cpuTick = (_clockCycleCount % _cpuClockDivisor == 0);
+  if (ppuTick)
   {
     PPU_Tick(&_ppu);
   }
-  if (_clockCycleCount % _cpuClockDivisor == 0)
+  if (cpuTick)
   {
     // Handle DMA
     switch (_bus.DMA.State)
@@ -81,6 +83,11 @@ void NES_TickClock(void)
 
     _isEvenCpuCycle = !_isEvenCpuCycle;
   }
+  if (ppuTick)
+  {
+    PPU_PostTick(&_ppu);
+  }
+
   _clockCycleCount++;
 }
 

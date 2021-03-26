@@ -40,13 +40,8 @@ typedef enum
   SPRITE_EVAL_STATE_END
 } SpriteEvalState_t;
 
-typedef struct _PPU_t
+typedef struct _PPU_Registers_t
 {
-  unsigned int FrameCount;
-  unsigned int CycleCount;          // Total cycle count, debugging info
-  unsigned int CyclesSinceReset;    // Amount of cycles since last reset
-  Bus_t *Bus;               // The bus this PPU is connected to
-
   // Registers
   uint8_t Ctrl;             // Control register, various things
   uint8_t Mask;             // Mask register, rendering related flags
@@ -55,6 +50,20 @@ typedef struct _PPU_t
   uint8_t OAMData;          // Data register used to read or write data to OAM
   uint8_t Scroll;           // Scroll register, used for writing scroll offsets
   uint8_t Data;             // Data register used for read/write via PPU bus from CPU
+
+
+} PPU_Registers_t;
+
+typedef struct _PPU_t
+{
+  unsigned int FrameCount;
+  unsigned int CycleCount;          // Total cycle count, debugging info
+  unsigned int CyclesSinceReset;    // Amount of cycles since last reset
+  Bus_t *Bus;               // The bus this PPU is connected to
+
+  // Registers
+  PPU_Registers_t ReadRegisters;  // Register set used for reading operations
+  PPU_Registers_t WriteRegisters; // Register set used for writing operations. Is copied to ReadRegisters after the tick (e.g. clock?)
 
   // Wonky things
   uint8_t AddressLatch;     // Address latch for '16 bit' registers like Address and Scroll
@@ -108,6 +117,7 @@ typedef struct _PPU_t
 
 void PPU_Initialize(PPU_t *ppu);
 void PPU_Tick(PPU_t *ppu);
+void PPU_PostTick(PPU_t *ppu);
 void PPU_Reset(PPU_t *ppu);
 uint8_t PPU_ReadFromCpu(PPU_t *ppu, uint16_t address);
 void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data);

@@ -72,7 +72,7 @@ static inline void SetFlag(uint8_t *P, uint8_t flag, bool set)
 
 static inline bool IsRendering(PPU_t *ppu)
 {
-  return IsFlagSet(&ppu->Mask, MASKFLAG_BACKGROUND) || IsFlagSet(&ppu->Mask, MASKFLAG_SPRITES);
+  return IsFlagSet(&ppu->ReadRegisters.Mask, MASKFLAG_BACKGROUND) || IsFlagSet(&ppu->ReadRegisters.Mask, MASKFLAG_SPRITES);
 }
 
 void PPU_RenderPixel(PPU_t *ppu, int x, int y, uint8_t pixel, uint8_t palette)
@@ -83,7 +83,7 @@ void PPU_RenderPixel(PPU_t *ppu, int x, int y, uint8_t pixel, uint8_t palette)
   }
 
   uint8_t colorPaletteIndex = Bus_ReadFromPPU(ppu->Bus, 0x3F00 + (palette << 2) + pixel);
-  if (IsFlagSet(&ppu->Mask, MASKFLAG_GREYSCALE))
+  if (IsFlagSet(&ppu->ReadRegisters.Mask, MASKFLAG_GREYSCALE))
   {
     colorPaletteIndex &= 0x30;
   }
@@ -117,12 +117,13 @@ void PPU_Initialize(PPU_t *ppu)
 {
   memset(ppu, 0, sizeof(*ppu));
 
-  ppu->Ctrl = 0x00;
-  ppu->Mask = 0x00;
-  ppu->Status = 0xA0;
-  ppu->OAMAddress = 0x00;
-  ppu->Scroll = 0x00;
-  ppu->Data = 0x00;
+  ppu->ReadRegisters.Ctrl = 0x00;
+  ppu->ReadRegisters.Mask = 0x00;
+  ppu->ReadRegisters.Status = 0xA0;
+  ppu->ReadRegisters.OAMAddress = 0x00;
+  ppu->ReadRegisters.Scroll = 0x00;
+  ppu->ReadRegisters.Data = 0x00;
+  ppu->WriteRegisters = ppu->ReadRegisters;
 
   ppu->VCount = -1;
 
@@ -132,11 +133,11 @@ void PPU_Initialize(PPU_t *ppu)
 
 void PPU_Reset(PPU_t *ppu)
 {
-  ppu->Ctrl = 0x00;
-  ppu->Mask = 0x00;
-  ppu->Status = ppu->Status & 0x80;
-  ppu->Scroll = 0x00;
-  ppu->Data = 0x00;
+  ppu->WriteRegisters.Ctrl = 0x00;
+  ppu->WriteRegisters.Mask = 0x00;
+  ppu->WriteRegisters.Status = ppu->ReadRegisters.Status & 0x80;
+  ppu->WriteRegisters.Scroll = 0x00;
+  ppu->WriteRegisters.Data = 0x00;
 }
 
 static void IncrementCoarseX(PPU_t *ppu)
@@ -227,9 +228,9 @@ void PPU_Tick(PPU_t *ppu)
     if (ppu->HCount == 1)
     {
       // Some flags are cleared here
-      SetFlag(&ppu->Status, STATFLAG_VBLANK, false);
-      SetFlag(&ppu->Status, STATFLAG_SPRITE_0_HIT, false);
-      SetFlag(&ppu->Status, STATFLAG_SPRITE_OVERFLOW, false);
+      SetFlag(&ppu->WriteRegisters.Status, STATFLAG_VBLANK, false);
+      SetFlag(&ppu->WriteRegisters.Status, STATFLAG_SPRITE_0_HIT, false);
+      SetFlag(&ppu->WriteRegisters.Status, STATFLAG_SPRITE_OVERFLOW, false);
     }
   }
   // Visible scanlines and pre-render scanline
@@ -277,7 +278,7 @@ void PPU_Tick(PPU_t *ppu)
       {
         // Fetch low BG tile byte
         ppu->NextBgTileLow = Bus_ReadFromPPU(ppu->Bus,
-                                             (IsFlagSet(&ppu->Ctrl, CTRLFLAG_BACKGROUND_ADDRESS) ? 0x1000 : 0x000)
+                                             (IsFlagSet(&ppu->ReadRegisters.Ctrl, CTRLFLAG_BACKGROUND_ADDRESS) ? 0x1000 : 0x000)
                                              + ((uint16_t)ppu->NextBgTileId << 4)
                                              + ((ppu->V >> 12) & 0x07) + 0);
       }
@@ -285,7 +286,7 @@ void PPU_Tick(PPU_t *ppu)
       {
         // Fetch high BG tile byte
         ppu->NextBgTileHigh = Bus_ReadFromPPU(ppu->Bus,
-                                              (IsFlagSet(&ppu->Ctrl, CTRLFLAG_BACKGROUND_ADDRESS) ? 0x1000 : 0x000)
+                                              (IsFlagSet(&ppu->ReadRegisters.Ctrl, CTRLFLAG_BACKGROUND_ADDRESS) ? 0x1000 : 0x000)
                                               + ((uint16_t)ppu->NextBgTileId << 4)
                                               + ((ppu->V >> 12) & 0x07) + 8);
       }
@@ -401,7 +402,7 @@ void PPU_Tick(PPU_t *ppu)
       uint8_t spriteIndex = (ppu->HCount - 257) / 8;
 
       // Reset OAM address
-      ppu->OAMAddress = 0;
+      ppu->WriteRegisters.OAMAddress = 0;
 
       if (pixelCycle == 1)
       {
@@ -429,7 +430,7 @@ void PPU_Tick(PPU_t *ppu)
         // Fetch low sprite tile byte
         ppu->ActiveSpriteData[spriteIndex].SRPatternLow =
             Bus_ReadFromPPU(ppu->Bus,
-                            (IsFlagSet(&ppu->Ctrl, CTRLFLAG_SPRITE_ADDRESS) ? 0x1000 : 0x000)
+                            (IsFlagSet(&ppu->ReadRegisters.Ctrl, CTRLFLAG_SPRITE_ADDRESS) ? 0x1000 : 0x000)
                             + ((uint16_t)ppu->ActiveSpriteOAM[spriteIndex].TileIndex << 4)
                             + ((ppu->VCount - ppu->ActiveSpriteOAM[spriteIndex].Y) & 0x07) + 0);
       }
@@ -438,7 +439,7 @@ void PPU_Tick(PPU_t *ppu)
         // Fetch high sprite tile byte
         ppu->ActiveSpriteData[spriteIndex].SRPatternHigh =
             Bus_ReadFromPPU(ppu->Bus,
-                            (IsFlagSet(&ppu->Ctrl, CTRLFLAG_SPRITE_ADDRESS) ? 0x1000 : 0x000)
+                            (IsFlagSet(&ppu->ReadRegisters.Ctrl, CTRLFLAG_SPRITE_ADDRESS) ? 0x1000 : 0x000)
                             + ((uint16_t)ppu->ActiveSpriteOAM[spriteIndex].TileIndex << 4)
                             + ((ppu->VCount - ppu->ActiveSpriteOAM[spriteIndex].Y) & 0x07) + 8);
 
@@ -454,7 +455,7 @@ void PPU_Tick(PPU_t *ppu)
     // Update shifters and counters
     if ((ppu->HCount >= 2 && ppu->HCount <= 257) || (ppu->HCount >= 322 && ppu->HCount <= 337))
     {
-      if (IsFlagSet(&ppu->Mask, MASKFLAG_BACKGROUND))
+      if (IsFlagSet(&ppu->ReadRegisters.Mask, MASKFLAG_BACKGROUND))
       {
         // Shift the shift registers
         ppu->SRAttributeHigh <<= 1;
@@ -463,7 +464,7 @@ void PPU_Tick(PPU_t *ppu)
         ppu->SRPatternLow <<= 1;
       }
 
-      if (IsFlagSet(&ppu->Mask, MASKFLAG_SPRITES) && (ppu->HCount >= 2 && ppu->HCount <= 257))
+      if (IsFlagSet(&ppu->ReadRegisters.Mask, MASKFLAG_SPRITES) && (ppu->HCount >= 2 && ppu->HCount <= 257))
       {
         for (int i = 0; i < 8; i++)
         {
@@ -491,11 +492,11 @@ void PPU_Tick(PPU_t *ppu)
       // Set VBLANK flag here
       if (ppu->SuppressVBlank == 0)
       {
-        SetFlag(&ppu->Status, STATFLAG_VBLANK, true);
-        if (IsFlagSet(&ppu->Ctrl, CTRLFLAG_VBLANK_NMI) && ppu->SuppressNMI == 0)
+        SetFlag(&ppu->WriteRegisters.Status, STATFLAG_VBLANK, true);
+        if (IsFlagSet(&ppu->ReadRegisters.Ctrl, CTRLFLAG_VBLANK_NMI) && ppu->SuppressNMI == 0)
         {
           // Trigger the NMI here as well
-          Bus_TriggerNMI(ppu->Bus, 0);
+          Bus_TriggerNMI(ppu->Bus, 1);
         }
       }
     }
@@ -513,7 +514,7 @@ void PPU_Tick(PPU_t *ppu)
   uint8_t spPalette = 0;
   uint8_t bgPriority = 0;
 
-  if (IsFlagSet(&ppu->Mask, MASKFLAG_BACKGROUND))
+  if (IsFlagSet(&ppu->ReadRegisters.Mask, MASKFLAG_BACKGROUND))
   {
     // Try to render a pixel, RenderPixel will deal with any out of bounds write attempts
     uint16_t pixelBit = (0x8000 >> ppu->X);
@@ -528,7 +529,7 @@ void PPU_Tick(PPU_t *ppu)
 
   bool isSpriteZero = false;
 
-  if (IsFlagSet(&ppu->Mask, MASKFLAG_SPRITES))
+  if (IsFlagSet(&ppu->ReadRegisters.Mask, MASKFLAG_SPRITES))
   {
     // Find a sprite pixel to draw
     for (int i = 0; i < 8; i++)
@@ -563,13 +564,13 @@ void PPU_Tick(PPU_t *ppu)
   }
   else if (bgPixel != 0 && spPixel != 0 && bgPriority == 0)
   {
-    if (isSpriteZero && IsFlagSet(&ppu->Mask, MASKFLAG_BACKGROUND))
+    if (isSpriteZero && IsFlagSet(&ppu->ReadRegisters.Mask, MASKFLAG_BACKGROUND))
     {
       // Sprite zero hit wooo
       // TODO: Partially hidden logic
       if (ppu->HCount != 255 && ppu->HCount >= 2 && ppu->HCount <= 257)
       {
-        SetFlag(&ppu->Status, STATFLAG_SPRITE_0_HIT, true);
+        SetFlag(&ppu->WriteRegisters.Status, STATFLAG_SPRITE_0_HIT, true);
       }
     }
     bgPixel = spPixel;
@@ -585,7 +586,7 @@ void PPU_Tick(PPU_t *ppu)
   // However, on uneven frames with rendering enabled we skip the last cycle of
   // the pre-render scanline (-1 here)
   if (ppu->HCount == 341 ||
-      (!ppu->IsEvenFrame && IsFlagSet(&ppu->Mask, MASKFLAG_BACKGROUND) && ppu->HCount == 340 && ppu->VCount == -1))
+      (!ppu->IsEvenFrame && IsFlagSet(&ppu->ReadRegisters.Mask, MASKFLAG_BACKGROUND) && ppu->HCount == 340 && ppu->VCount == -1))
   {
     ppu->HCount = 0;
     ppu->VCount++;
@@ -596,6 +597,11 @@ void PPU_Tick(PPU_t *ppu)
       ppu->FrameCount++;
     }
   }
+}
+
+void PPU_PostTick(PPU_t *ppu)
+{
+  ppu->ReadRegisters = ppu->WriteRegisters;
 }
 
 uint8_t PPU_ReadFromCpu(PPU_t *ppu, uint16_t address)
@@ -613,9 +619,9 @@ uint8_t PPU_ReadFromCpu(PPU_t *ppu, uint16_t address)
     return ppu->LatchedData;
   case 0x0002:
     // Status
-    result = (ppu->Status & ~STATFLAG_GARBAGE_MASK) | (ppu->LatchedData & STATFLAG_GARBAGE_MASK);
+    result = (ppu->ReadRegisters.Status & ~STATFLAG_GARBAGE_MASK) | (ppu->LatchedData & STATFLAG_GARBAGE_MASK);
     // Reading causes the address latch and the vblank flag to reset
-    SetFlag(&ppu->Status, STATFLAG_VBLANK, false);
+    SetFlag(&ppu->WriteRegisters.Status, STATFLAG_VBLANK, false);
     ppu->AddressLatch = 0;
     // Update latched data since this is a proper read
     ppu->LatchedData = result;
@@ -628,7 +634,7 @@ uint8_t PPU_ReadFromCpu(PPU_t *ppu, uint16_t address)
   case 0x0004:
     // OAMData
     // Just read the OAM from the current address
-    return ppu->OAMAsPtr[ppu->OAMAddress];
+    return ppu->OAMAsPtr[ppu->ReadRegisters.OAMAddress];
     break;
   case 0x0005:
     // Scroll
@@ -651,7 +657,7 @@ uint8_t PPU_ReadFromCpu(PPU_t *ppu, uint16_t address)
       ppu->DataBuffer = Bus_ReadFromPPU(ppu->Bus, ppu->V - 0x1000);
     }
     // The vram address always gets incremented on reading
-    ppu->V += IsFlagSet(&ppu->Ctrl, CTRLFLAG_VRAM_INCREMENT) ? 32 : 1;
+    ppu->V += IsFlagSet(&ppu->ReadRegisters.Ctrl, CTRLFLAG_VRAM_INCREMENT) ? 32 : 1;
     return result;
   default:
     // TODO: Error
@@ -673,30 +679,30 @@ void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data)
   {
   case 0x0000:
     // Ctrl
-    wasNMIFlagSet = IsFlagSet(&ppu->Ctrl, CTRLFLAG_VBLANK_NMI);
+    wasNMIFlagSet = IsFlagSet(&ppu->ReadRegisters.Ctrl, CTRLFLAG_VBLANK_NMI);
 
-    ppu->Ctrl = data;
+    ppu->ReadRegisters.Ctrl = data;
     // Update temp register with nametable info
     // Bits 10-11 are the ones we need
     ppu->T = (ppu->T & ~0x0C00) | (((uint16_t)data << 10) & 0x0C00);
 
     // If we are in VBLANK and the vblank status flag is still set, then enabling the NMI
     // here will instantly trigger it
-    if (!wasNMIFlagSet && IsFlagSet(&ppu->Status, STATFLAG_VBLANK) && IsFlagSet(&ppu->Ctrl, CTRLFLAG_VBLANK_NMI))
+    if (!wasNMIFlagSet && IsFlagSet(&ppu->ReadRegisters.Status, STATFLAG_VBLANK) && IsFlagSet(&ppu->ReadRegisters.Ctrl, CTRLFLAG_VBLANK_NMI))
     {
       Bus_TriggerNMI(ppu->Bus, 1);
     }
     break;
   case 0x0001:
     // Mask
-    ppu->Mask = data;
+    ppu->WriteRegisters.Mask = data;
     break;
   case 0x0002:
     // Status
     break;
   case 0x0003:
     // OAMAddress
-    ppu->OAMAddress = data;
+    ppu->WriteRegisters.OAMAddress = data;
     break;
   case 0x0004:
     // OAMData
@@ -708,9 +714,9 @@ void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data)
     else
     {
       // Just write to the OAM at the current address
-      ppu->OAMAsPtr[ppu->OAMAddress] = data;
+      ppu->OAMAsPtr[ppu->ReadRegisters.OAMAddress] = data;
       // Writing also increments OAM Address by one, reading does not
-      ppu->OAMAddress++;
+      ppu->WriteRegisters.OAMAddress++;
     }
     break;
   case 0x0005:
@@ -764,7 +770,7 @@ void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data)
       //LogMessage("Writing to PPU memory at line %d, 0x%04X (0x%04X) = 0x%02X", ppu->VCount, ppu->V, ppu->V & 0x3FFF, data);
     }
     Bus_WriteFromPPU(ppu->Bus, ppu->V, data);
-    ppu->V += IsFlagSet(&ppu->Ctrl, CTRLFLAG_VRAM_INCREMENT) ? 32 : 1;
+    ppu->V += IsFlagSet(&ppu->ReadRegisters.Ctrl, CTRLFLAG_VRAM_INCREMENT) ? 32 : 1;
     break;
   default:
     // TODO: Error

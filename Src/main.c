@@ -172,7 +172,8 @@ static void Initialize()
   //const char * romFile = "Resources/vram_access.nes";
   //const char * romFile = "Resources/rom_singles/01-basics.nes";
   //const char * romFile = "Resources/ppu_vbl_nmi/rom_singles/10-even_odd_timing.nes";
-  const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/04-nmi_control.nes";
+  //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/04-nmi_control.nes";
+  const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/05-nmi_timing.nes";
   const char *paletteFile = "Resources/ntscpalette.pal";
   Bus_t *bus;
   CPU_t *cpu;
@@ -372,8 +373,8 @@ static bool Update(float deltaTime)
             "H:%03d V:%03d CTRL:%02X STAT:%02X FRAME:%d",
             ppu->HCount,
             ppu->VCount,
-            ppu->Ctrl,
-            ppu->Status,
+            ppu->ReadRegisters.Ctrl,
+            ppu->ReadRegisters.Status,
             ppu->FrameCount
             );
   }
