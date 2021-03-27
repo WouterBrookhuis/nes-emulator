@@ -9,7 +9,9 @@
 #include "SharedSDL.h"
 #include "Text.h"
 #include <stdint.h>
+#include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 #include "log.h"
 #include "Nes/NES.h"
 #include "Nes/INesLoader.h"
@@ -73,7 +75,7 @@ static SDL_Surface *_ppuPatternTableSurfaces[2];
 
 static bool _controller1Buttons[NR_OF_NES_BUTTONS];
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
   int sdlReturnCode;
 
