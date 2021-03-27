@@ -9,6 +9,7 @@
 #include "CPU.h"
 #include "Bus.h"
 #include "stdint.h"
+#include "SharedSDL.h"
 
 #include <string.h>
 #include <stdbool.h>
@@ -21,6 +22,7 @@ void CPU_Initialize(CPU_t *cpu)
   memset(cpu, 0, sizeof(*cpu));
 
   cpu->CycleCount = 0;
+  cpu->IsRisingClockEdge = true;
 }
 
 void CPU_Reset(CPU_t *cpu)
@@ -31,6 +33,7 @@ void CPU_Reset(CPU_t *cpu)
   cpu->CycleCount = 7;
   cpu->S = 0xFD;
   cpu->P = 0x24;
+  cpu->IsRisingClockEdge = true;
 }
 
 void CPU_NMI(CPU_t *cpu, bool assert)
@@ -45,20 +48,9 @@ void CPU_Tick(CPU_t *cpu)
   bool addressingCanHaveExtraCycle = false;
   bool instructionCanHaveExtraCycle = false;
 
-  if (cpu->IsKilled)
+  if (!cpu->IsRisingClockEdge)
   {
-    // We be dead, exit before doing anything
-    return;
-  }
-
-  // Clock prescaler of 12
-  if (cpu->ClockPhaseCounter == 0)
-  {
-    cpu->ClockPhaseCounter++;
-  }
-  else if (cpu->ClockPhaseCounter == 6)
-  {
-    // NMI edge detection
+    // NMI edge detection on falling edges
     CR1_Clock(&cpu->NMILineAsserted);
     if (CR1_Read(cpu->NMILineAsserted) && !cpu->NMILineAssertedPrevious)
     {
@@ -68,19 +60,21 @@ void CPU_Tick(CPU_t *cpu)
 
     cpu->NMILineAssertedPrevious = CR1_Read(cpu->NMILineAsserted);
 
-    cpu->ClockPhaseCounter++;
+    // Next tick will be a rising clock edge
+    cpu->IsRisingClockEdge = true;
     return;
   }
-  else if (cpu->ClockPhaseCounter == 11)
+
+  // Next tick will be a falling clock edge
+  cpu->IsRisingClockEdge = false;
+
+  if (cpu->IsKilled)
   {
-    cpu->ClockPhaseCounter = 0;
+    // We be dead, exit before doing anything
     return;
   }
-  else
-  {
-    cpu->ClockPhaseCounter++;
-    return;
-  }
+
+  SharedSDL_BeginTiming(3);
 
   cpu->CycleCount++;
 
@@ -274,4 +268,6 @@ void CPU_Tick(CPU_t *cpu)
 
   // Always decrement cycle counter
   cpu->CyclesLeftForInstruction--;
+
+  SharedSDL_EndTiming(3);
 }

@@ -10,6 +10,7 @@
 #include "Palette.h"
 #include <string.h>
 #include <SDL2/SDL.h>
+#include "SharedSDL.h"
 #include "log.h"
 
 #define CTRLFLAG_NAMETABLE_MASK       0x03
@@ -65,15 +66,15 @@ void PPU_RenderPixel(PPU_t *ppu, int x, int y, uint8_t pixel, uint8_t palette)
     return;
   }
 
+  if (x < 0 || x >= _renderSurface->w || y < 0 || y >= _renderSurface->h)
+  {
+    return;
+  }
+
   uint8_t colorPaletteIndex = Bus_ReadFromPPU(ppu->Bus, 0x3F00 + (palette << 2) + pixel);
   if (CR8_IsBitSet(ppu->Mask, MASKFLAG_GREYSCALE))
   {
     colorPaletteIndex &= 0x30;
-  }
-
-  if (x < 0 || x >= _renderSurface->w || y < 0 || y >= _renderSurface->h)
-  {
-    return;
   }
 
   uint8_t r;
@@ -84,11 +85,6 @@ void PPU_RenderPixel(PPU_t *ppu, int x, int y, uint8_t pixel, uint8_t palette)
                     _renderSurface->format->BytesPerPixel * x;
   Palette_GetRGB(colorPaletteIndex, &r, &g, &b);
   *(uint32_t*)pixelPtr = SDL_MapRGB(_renderSurface->format, r, g, b);
-
-//  if (x % 8 == 0 || y % 8 == 0)
-//  {
-//    *(uint32_t*)pixelPtr = SDL_MapRGB(_renderSurface->format, 255, 0, 0);
-//  }
 }
 
 void PPU_SetRenderSurface(SDL_Surface *surface)
@@ -188,14 +184,9 @@ void PPU_ClockRegisters(PPU_t *ppu)
 
 void PPU_Tick(PPU_t *ppu)
 {
-  // Clock prescaling of 4
-  if ((ppu->PhaseCounter++ % 4) != 0)
-  {
-    return;
-  }
+  SharedSDL_BeginTiming(2);
 
   ppu->PhaseCounter = 1;
-
 
   // Increment cycles
   ppu->CycleCount++;
@@ -591,6 +582,8 @@ void PPU_Tick(PPU_t *ppu)
       ppu->FrameCount++;
     }
   }
+
+  SharedSDL_EndTiming(2);
 }
 
 uint8_t PPU_ReadFromCpu(PPU_t *ppu, uint16_t address)

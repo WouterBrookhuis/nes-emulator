@@ -8,7 +8,7 @@
 
 #include <SDL2/SDL.h>
 #include "log.h"
-
+#include <stdio.h>
 typedef struct
 {
   int windowWidth;
@@ -20,6 +20,14 @@ typedef struct
   SharedSDL_Draw draw;
   SharedSDL_EventHandler userEventHandler;
 } ControlBlock_t;
+
+#define MAX_PERF_TIMER_STACK_DEPTH    (20)
+
+uint64_t _perfTimerStack[MAX_PERF_TIMER_STACK_DEPTH];
+uint64_t _perfTimerAccum[MAX_PERF_TIMER_STACK_DEPTH];
+uint32_t _perfTimerCount[MAX_PERF_TIMER_STACK_DEPTH];
+unsigned int _perfTimerStackIndex;
+
 
 static ControlBlock_t _controlBlock;
 
@@ -76,9 +84,13 @@ int SharedSDL_Start()
   uint32_t frameEndTicks;
   uint32_t frameTickDuration;
 
+  LogMessage("PerfCounterFrequency = %ul", SDL_GetPerformanceFrequency());
+
   while (run)
   {
     frameStartTicks = SDL_GetTicks();
+
+    SharedSDL_BeginTiming(0);
 
     while (SDL_PollEvent(&event))
     {
@@ -104,13 +116,18 @@ int SharedSDL_Start()
       }
     }
 
-    SDL_FillRect(windowSurface, NULL,
-                 SDL_MapRGB(windowSurface->format, 0x00, 0x00, 0x00));
+    SharedSDL_EndTiming(0);
+
+    SharedSDL_BeginTiming(1);
+
+    memset(windowSurface->pixels, 0x00, windowSurface->h * windowSurface->pitch);
 
     if (_controlBlock.draw != NULL)
     {
       _controlBlock.draw(windowSurface);
     }
+
+    SharedSDL_EndTiming(1);
 
     frameEndTicks = SDL_GetTicks();
     frameTickDuration = frameEndTicks - frameStartTicks;
@@ -125,6 +142,19 @@ int SharedSDL_Start()
     }
 
     SDL_UpdateWindowSurface(window);
+
+//    SharedSDL_PrintTiming(0, "Update");
+//    SharedSDL_PrintTiming(1, "Draw");
+//    SharedSDL_PrintTiming(2, "PPU");
+//    SharedSDL_PrintTiming(3, "CPU");
+
+    for(uint_fast8_t i = 0; i < 5; i++)
+    {
+      printf("%I64u, ", _perfTimerAccum[i]);
+      _perfTimerAccum[i] = 0;
+    }
+
+    printf("\n");
   }
 
   //close_window_on_error:
@@ -133,6 +163,35 @@ int SharedSDL_Start()
   SDL_Quit();
 
   return 0;
+}
+
+void SharedSDL_BeginTiming(uint32_t index)
+{
+  _perfTimerStack[index] = SDL_GetPerformanceCounter();
+}
+
+void SharedSDL_EndTiming(uint32_t index)
+{
+  uint64_t delta = SDL_GetPerformanceCounter() - _perfTimerStack[index];
+  _perfTimerAccum[index] += delta;
+  _perfTimerCount[index]++;
+}
+
+void SharedSDL_ResetTiming(uint32_t index)
+{
+  _perfTimerAccum[index] = 0;
+  _perfTimerCount[index] = 0;
+}
+
+void SharedSDL_PrintTiming(uint32_t index, const char *name)
+{
+  uint64_t avg = 0;
+  if (_perfTimerCount[index] != 0)
+  {
+    avg = _perfTimerAccum[index] / _perfTimerCount[index];
+  }
+
+  LogMessage("[%s] Avg: %lu Total: %lu", name, avg, _perfTimerAccum[index]);
 }
 
 SDL_Surface* SharedSDL_LoadImage(const char* filepath)

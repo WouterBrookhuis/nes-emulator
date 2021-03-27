@@ -174,20 +174,21 @@ static void Initialize()
   //const char * romFile = "Resources/super mario bros.nes";
   //const char * romFile = "Resources/vram_access.nes";
   //const char * romFile = "Resources/rom_singles/01-basics.nes";
-  const char * romFile = "Resources/instr_test-v5/rom_singles/02-implied.nes";
+  //const char * romFile = "Resources/instr_test-v5/rom_singles/02-implied.nes";
   //const char *romFile = "Resources/nmi_sync/demo_ntsc.nes";
   //const char *romFile = "Resources/ppu_sprite_hit/ppu_sprite_hit.nes";
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/01-vbl_basics.nes";
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/02-vbl_set_time.nes";
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/03-vbl_clear_time.nes";
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/04-nmi_control.nes";
-  //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/05-nmi_timing.nes";
+  const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/05-nmi_timing.nes";
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/06-suppression.nes";
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/07-nmi_on_timing.nes";
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/08-nmi_off_timing.nes";
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/09-even_odd_frames.nes";
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/10-even_odd_timing.nes";
   //const char *romFile = "Resources/cpu_timing_test6/cpu_timing_test.nes";
+  //const char *romFile = "Resources/cpu_interrupts_v2/rom_singles/2-nmi_and_brk.nes";
   const char *paletteFile = "Resources/ntscpalette.pal";
   Bus_t *bus;
   CPU_t *cpu;
@@ -484,22 +485,19 @@ static bool Update(float deltaTime)
     _frameStepKeyWasPressed = false;
   }
 
+  SharedSDL_BeginTiming(4);
   if (_run)
   {
     // Realtime-ish speed
-    for (int i = 0; i < 1; i++)
+    NES_TickUntilFrameComplete();
+    if (cpu->IsKilled)
     {
-      FormatInstruction(cpu, _textBuffer);
-      //NES_TickClock();
-      //NES_TickUntilCPUComplete();
-      NES_TickUntilFrameComplete();
-      if (cpu->IsKilled)
-      {
-        _run = false;
-        break;
-      }
+      _run = false;
     }
   }
+  SharedSDL_EndTiming(4);
+
+  FormatInstruction(cpu, _textBuffer);
 
   // Draw pattern tables AFTER rendering
   if (_patternTableDrawIndex < 2)

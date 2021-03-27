@@ -35,6 +35,7 @@ typedef struct _CPU_t
   uint8_t S;      // Stack pointer
   uint8_t P;      // Status register
 
+  bool IsRisingClockEdge;
   bool NMILineAssertedPrevious;
   cr1_t NMILineAsserted;
   cr1_t NMIPendingInternal;

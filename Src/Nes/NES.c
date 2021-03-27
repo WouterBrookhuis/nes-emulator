@@ -22,6 +22,9 @@ static PPU_t _ppu;
 static bool _ppuLastFrameEven;
 static bool _isEvenCpuCycle;
 
+static uint8_t _ppuTicker;
+static uint8_t _cpuTicker;
+
 void NES_Initialize(void)
 {
   _cpuClockDivisor = 12;  // NTSC mode
@@ -38,15 +41,18 @@ void NES_Initialize(void)
 
 void NES_TickClock(void)
 {
-  PPU_Tick(&_ppu);
-  CPU_Tick(&_cpu);
+  if (_ppuTicker == 0)
+  {
+    PPU_Tick(&_ppu);
+  }
 
-  if (_clockCycleCount % _cpuClockDivisor == 0)
+  if (_cpuTicker  == 0)
   {
     // Handle DMA
     switch (_bus.DMA.State)
     {
     case DMA_STATE_IDLE:
+      CPU_Tick(&_cpu);
       break;
     case DMA_STATE_WAITING:
       if (!_isEvenCpuCycle)
@@ -79,7 +85,13 @@ void NES_TickClock(void)
     _isEvenCpuCycle = !_isEvenCpuCycle;
   }
 
-  PPU_ClockRegisters(&_ppu);
+  if (_ppuTicker == 0)
+  {
+    PPU_ClockRegisters(&_ppu);
+  }
+
+  _ppuTicker = (_ppuTicker + 1) & 0x1;
+  _cpuTicker = (_cpuTicker + 1) & 0x3;
 
   _clockCycleCount++;
 }
@@ -91,11 +103,6 @@ void NES_TickUntilCPUComplete(void)
   {
     NES_TickClock();
   }
-  // Complete all master clock cycles BEFORE triggering the CPU again
-  while (_clockCycleCount % _cpuClockDivisor != 0)
-  {
-    NES_TickClock();
-  }
 }
 
 void NES_TickUntilFrameComplete(void)
@@ -104,7 +111,7 @@ void NES_TickUntilFrameComplete(void)
   {
     NES_TickClock();
   }
-  _ppu.IsEvenFrame = _ppuLastFrameEven;
+  _ppuLastFrameEven = _ppu.IsEvenFrame;
 }
 
 PPU_t *NES_GetPPU(void)
