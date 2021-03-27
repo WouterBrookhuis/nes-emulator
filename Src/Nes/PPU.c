@@ -495,20 +495,11 @@ void PPU_Tick(PPU_t *ppu)
     if (ppu->HCount == 1)
     {
       // Set VBLANK flag here
-      if (ppu->SuppressVBlank == 0)
-      {
-        CR8_SetBits(&ppu->Status, STATFLAG_VBLANK);
-      }
+      CR8_SetBits(&ppu->Status, STATFLAG_VBLANK);
     }
   }
 
   Bus_NMI(ppu->Bus, CR8_IsBitSet(ppu->Ctrl, CTRLFLAG_VBLANK_NMI) && CR8_IsBitSet(ppu->Status, STATFLAG_VBLANK));
-
-  // Decrement the VBlank suppression counter
-  if (ppu->SuppressVBlank > 0)
-  {
-    ppu->SuppressVBlank--;
-  }
 
   // Try to render a pixel
   uint8_t bgPixel = 0;

@@ -259,7 +259,8 @@ void CPU_Tick(CPU_t *cpu)
       }
     }
   }
-  else if (cpu->CyclesLeftForInstruction == 1)
+
+  if (cpu->CyclesLeftForInstruction == 1)
   {
     if (CR1_Read(cpu->NMIPendingInternal))
     {

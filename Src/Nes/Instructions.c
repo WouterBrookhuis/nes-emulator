@@ -36,8 +36,8 @@ int ADC(CPU_t *cpu)
 // Illegal
 int AHX(CPU_t *cpu)
 {
-  // TODO: AHX
-  KIL(cpu);
+  // Store A & X & H into address
+  Write(cpu, cpu->Address, cpu->A & cpu->X & (cpu->Address >> 8));
   return 0;
 }
 
@@ -849,30 +849,32 @@ int KIL(CPU_t *cpu)
   return 0;
 }
 
-
-// TODO: These unoffical instructions
-
+// Illegal: Magic bus-based AND operation between A, X and the immediate value
 int XAA(CPU_t *cpu)
 {
-  KIL(cpu);
+  cpu->A = cpu->A & cpu->X & Read(cpu, cpu->Address);
   return 0;
 }
 
+// Illegal: Store A & X into S and A & X & H into address
 int TAS(CPU_t *cpu)
 {
-  KIL(cpu);
+  Write(cpu, cpu->Address, cpu->A & cpu->X & (cpu->Address >> 8));
+  cpu->S = cpu->A & cpu->X;
   return 0;
 }
 
+// Illegal: Store Y & H into address
 int SHY(CPU_t *cpu)
 {
-  KIL(cpu);
+  Write(cpu, cpu->Address, cpu->Y & (cpu->Address >> 8));
   return 0;
 }
 
+// Illegal: Store X & H into address
 int SHX(CPU_t *cpu)
 {
-  KIL(cpu);
+  Write(cpu, cpu->Address, cpu->X & (cpu->Address >> 8));
   return 0;
 }
 

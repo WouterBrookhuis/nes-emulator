@@ -9,6 +9,7 @@
 #include "Mapper.h"
 #include "Mapper000.h"
 #include "Mapper001.h"
+#include "log.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -23,12 +24,14 @@ bool INesLoader_Load(const char* file, Mapper_t* mapper)
   f = fopen(file, "rb");
   if (f == NULL)
   {
+    LogError("Unable to open file %s", file);
     return false;
   }
 
   if (fread(&header, 1, 16, f) != 16)
   {
     fclose(f);
+    LogError("Unable to read file %s", file);
     return false;
   }
 
@@ -48,6 +51,7 @@ bool INesLoader_Load(const char* file, Mapper_t* mapper)
     if (fseek(f, 512, SEEK_CUR) != 0)
     {
       fclose(f);
+      LogError("Unable to read file %s", file);
       return false;
     }
   }
@@ -69,6 +73,7 @@ bool INesLoader_Load(const char* file, Mapper_t* mapper)
 //    break;
   default:
     fclose(f);
+    LogError("Mapper id %u in file %s is not supported", mapperId, file);
     return false;
   }
 
@@ -77,6 +82,7 @@ bool INesLoader_Load(const char* file, Mapper_t* mapper)
   {
     // TODO: Free mapper memory
     fclose(f);
+    LogError("Unable to fully read file %s", file);
     return false;
   }
 

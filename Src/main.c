@@ -64,6 +64,7 @@ static char _memoryViewBuffer[MEMORY_VIEW_CHARS_PER_ROW * MEMORY_VIEW_ROWS + 1];
 static char _oamViewBuffer[OAM_VIEW_ENTRIES * OAM_VIEW_CHARS_PER_ROW + 1];
 static Mapper_t _mapper;
 static bool _stepKeyWasPressed;
+static bool _frameStepKeyWasPressed;
 static bool _runKeyWasPressed;
 static bool _statusKeyWasPressed;
 static bool _run;
@@ -173,17 +174,20 @@ static void Initialize()
   //const char * romFile = "Resources/super mario bros.nes";
   //const char * romFile = "Resources/vram_access.nes";
   //const char * romFile = "Resources/rom_singles/01-basics.nes";
-  //const char * romFile = "Resources/ppu_vbl_nmi/rom_singles/10-even_odd_timing.nes";
+  const char * romFile = "Resources/instr_test-v5/all_instrs.nes";
+  //const char *romFile = "Resources/nmi_sync/demo_ntsc.nes";
+  //const char *romFile = "Resources/ppu_sprite_hit/ppu_sprite_hit.nes";
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/01-vbl_basics.nes";
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/02-vbl_set_time.nes";
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/03-vbl_clear_time.nes";
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/04-nmi_control.nes";
-  const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/05-nmi_timing.nes";
+  //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/05-nmi_timing.nes";
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/06-suppression.nes";
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/07-nmi_on_timing.nes";
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/08-nmi_off_timing.nes";
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/09-even_odd_frames.nes";
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/10-even_odd_timing.nes";
+  //const char *romFile = "Resources/cpu_timing_test6/cpu_timing_test.nes";
   const char *paletteFile = "Resources/ntscpalette.pal";
   Bus_t *bus;
   CPU_t *cpu;
@@ -266,6 +270,10 @@ static void Event(SDL_Event* event)
     if (event->key.keysym.sym == SDLK_SPACE)
     {
       _stepKeyWasPressed = true;
+    }
+    else if (event->key.keysym.sym == SDLK_f)
+    {
+      _frameStepKeyWasPressed = true;
     }
     else if (event->key.keysym.sym == SDLK_r)
     {
@@ -467,8 +475,13 @@ static bool Update(float deltaTime)
       NES_TickClock();
     }
     NES_TickUntilCPUComplete();
-    //NES_TickUntilFrameComplete();
     _stepKeyWasPressed = false;
+  }
+
+  if (_frameStepKeyWasPressed)
+  {
+    NES_TickUntilFrameComplete();
+    _frameStepKeyWasPressed = false;
   }
 
   if (_run)
