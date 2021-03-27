@@ -8,6 +8,7 @@
 #include "Controllers.h"
 #include "log.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #define MAX_NUM_CONTROLLERS     4
@@ -33,13 +34,7 @@ void Controllers_Initialize(uint8_t numberOfControllers)
 
 void Controllers_Write(uint8_t controllerIndex, uint8_t data)
 {
-  // TODO: Proper controller support via SDL
-  // Just map both to the same keys for now
-  if (controllerIndex >= _numControllers)
-  {
-    LogError("Invalid controller index %d", controllerIndex);
-    return;
-  }
+  controllerIndex &= MAX_NUM_CONTROLLERS;
 
   if ((data & 0x01) == 1)
   {
@@ -71,14 +66,11 @@ uint8_t Controllers_ReadAndShiftState(uint8_t controllerIndex)
 {
   uint8_t result;
 
-  if (controllerIndex >= _numControllers)
-  {
-    LogError("Invalid controller index %d", controllerIndex);
-    return 0x00;
-  }
+  controllerIndex &= MAX_NUM_CONTROLLERS;
 
   result = _controllers[controllerIndex].Data & 0x01;
   _controllers[controllerIndex].Data >>= 1;
+  // TODO: Why is this commented out?
   // NES controllers will return 1 after reading all bits, so set the MSB
   //_controllers[controllerIndex].Data |= 0x80;
 

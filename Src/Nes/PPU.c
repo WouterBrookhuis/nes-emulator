@@ -235,7 +235,7 @@ void PPU_Tick(PPU_t *ppu)
     // Memory accessing to get background data
     if ((ppu->HCount >= 1 && ppu->HCount <= 257) || (ppu->HCount >= 321 && ppu->HCount <= 337))
     {
-      uint8_t pixelCycle = ppu->HCount % 8;
+      uint8_t pixelCycle = ppu->HCount & 0x07;
 
       if (pixelCycle == 1)
       {
@@ -413,11 +413,12 @@ void PPU_Tick(PPU_t *ppu)
       else if (pixelCycle == 3)
       {
         // Fetch garbage AT
-        Bus_ReadFromPPU(ppu->Bus,
-                        0x23C0
-                        | (ppu->V & 0x0C00)
-                        | ((ppu->V >> 4) & 0x0038)
-                        | ((ppu->V >> 2) & 0x0007));
+        // TODO: Enable again in case read has side effects
+//        Bus_ReadFromPPU(ppu->Bus,
+//                        0x23C0
+//                        | (ppu->V & 0x0C00)
+//                        | ((ppu->V >> 4) & 0x0038)
+//                        | ((ppu->V >> 2) & 0x0007));
         // Load X coordinate into latch
         ppu->ActiveSpriteData[spriteIndex].X = ppu->ActiveSpriteOAM[spriteIndex].X;
       }
@@ -524,7 +525,7 @@ void PPU_Tick(PPU_t *ppu)
         uint8_t pixel = ((ppu->ActiveSpriteData[i].SRPatternLow & 0x80) > 0) |
                         (((ppu->ActiveSpriteData[i].SRPatternHigh &  0x80) > 0) << 1);
         // TODO: Fix the fucking palette
-        uint8_t palette = (ppu->ActiveSpriteData[i].Attributes & 0x03) + 4;
+        uint8_t palette = (ppu->ActiveSpriteData[i].Attributes & ATTRFLAG_PALLETE_MASK) + 4;
 
         if (pixel != 0)
         {

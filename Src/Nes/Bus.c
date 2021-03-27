@@ -14,8 +14,8 @@
 #include "Mapper.h"
 #include <string.h>
 
-// TODO: No shared ram, what is this, a multiprocessor system?
-uint8_t _testRam[UINT16_MAX];
+// TODO: RAM?
+uint8_t _testRam[0x800];
 uint8_t _palette[256];
 uint8_t _vram[2048];
 uint8_t _pattern[8192];

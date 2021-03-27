@@ -46,43 +46,35 @@ void NES_TickClock(void)
     PPU_Tick(&_ppu);
   }
 
-  if (_cpuTicker  == 0)
+  if ((_cpuTicker == 0) || (_cpuTicker == 3))
   {
     // Handle DMA
-    switch (_bus.DMA.State)
+    if (_bus.DMA.State == DMA_STATE_IDLE)
     {
-    case DMA_STATE_IDLE:
       CPU_Tick(&_cpu);
-      break;
-    case DMA_STATE_WAITING:
-      if (!_isEvenCpuCycle)
-      {
-        // DMA can only start on even cycles, so if this was an odd cycle the next one is even
-        _bus.DMA.State = DMA_STATE_RUNNING;
-      }
-      break;
-    case DMA_STATE_RUNNING:
-      if (_isEvenCpuCycle)
-      {
-        // Read from cpu
-        _bus.DMA.Data = Bus_ReadFromCPU(&_bus, _bus.DMA.CPUBaseAddress + _bus.DMA.NumTransfersComplete);
-      }
-      else
-      {
-        // Write to PPU OAM via OAMDATA register
-        PPU_WriteFromCpu(&_ppu, 0x2004, _bus.DMA.Data);
-
-        _bus.DMA.NumTransfersComplete++;
-
-        if (_bus.DMA.NumTransfersComplete == 256)
-        {
-          _bus.DMA.State = DMA_STATE_IDLE;
-        }
-      }
-      break;
     }
+    else if ((_bus.DMA.State == DMA_STATE_RUNNING) && (_cpuTicker == 3))
+    {
+      // DMA can only start on even cycles, so if this was an odd cycle the next one is even
+      _bus.DMA.State = DMA_STATE_RUNNING;
+    }
+    else if (_cpuTicker == 0)
+    {
+      // Read from cpu
+      _bus.DMA.Data = Bus_ReadFromCPU(&_bus, _bus.DMA.CPUBaseAddress + _bus.DMA.NumTransfersComplete);
+    }
+    else
+    {
+      // Write to PPU OAM via OAMDATA register
+      PPU_WriteFromCpu(&_ppu, 0x2004, _bus.DMA.Data);
 
-    _isEvenCpuCycle = !_isEvenCpuCycle;
+      _bus.DMA.NumTransfersComplete++;
+
+      if (_bus.DMA.NumTransfersComplete == 0)
+      {
+        _bus.DMA.State = DMA_STATE_IDLE;
+      }
+    }
   }
 
   if (_ppuTicker == 0)
@@ -91,7 +83,7 @@ void NES_TickClock(void)
   }
 
   _ppuTicker = (_ppuTicker + 1) & 0x1;
-  _cpuTicker = (_cpuTicker + 1) & 0x3;
+  _cpuTicker = (_cpuTicker + 1) % 6;
 
   _clockCycleCount++;
 }
@@ -99,7 +91,8 @@ void NES_TickClock(void)
 void NES_TickUntilCPUComplete(void)
 {
   // Tick until the last CPU cycle for the current instruction
-  while (_cpu.CyclesLeftForInstruction != 0)
+  unsigned int currentCount = _cpu.InstructionCount;
+  while (_cpu.InstructionCount == currentCount)
   {
     NES_TickClock();
   }

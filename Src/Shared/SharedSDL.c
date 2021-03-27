@@ -151,7 +151,7 @@ int SharedSDL_Start()
     for(uint_fast8_t i = 0; i < 5; i++)
     {
       printf("%I64u, ", _perfTimerAccum[i]);
-      _perfTimerAccum[i] = 0;
+      SharedSDL_ResetTiming(i);
     }
 
     printf("\n");

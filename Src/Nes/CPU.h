@@ -21,6 +21,7 @@ typedef struct _CPU_t
   unsigned int ClockPhaseCounter;   // Counter for the external clock, we run at a prescaler of 4
   unsigned int CycleCount;          // Total cycle count, debugging info
   unsigned int CyclesLeftForInstruction;  // Amount of cycles left for the current instruction
+  unsigned int InstructionCount;    // Amount of executed instructions
   Bus_t *Bus;                       // Pointer to Bus structure the CPU is connected to
   bool IsKilled;                    // Flag to check if processor is killed by invalid instruction
   AddressingMode_t AddressingMode;  // Addressing mode of current instruction
@@ -37,7 +38,7 @@ typedef struct _CPU_t
 
   bool IsRisingClockEdge;
   bool NMILineAssertedPrevious;
-  cr1_t NMILineAsserted;
+  bool NMILineAsserted;
   cr1_t NMIPendingInternal;
   bool NextInstructionIsNMI;
 } CPU_t;

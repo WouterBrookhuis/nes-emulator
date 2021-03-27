@@ -38,7 +38,7 @@ void CPU_Reset(CPU_t *cpu)
 
 void CPU_NMI(CPU_t *cpu, bool assert)
 {
-  CR1_Write(&cpu->NMILineAsserted, assert);
+  cpu->NMILineAsserted = assert;
 }
 
 void CPU_Tick(CPU_t *cpu)
@@ -51,14 +51,13 @@ void CPU_Tick(CPU_t *cpu)
   if (!cpu->IsRisingClockEdge)
   {
     // NMI edge detection on falling edges
-    CR1_Clock(&cpu->NMILineAsserted);
-    if (CR1_Read(cpu->NMILineAsserted) && !cpu->NMILineAssertedPrevious)
+    if (cpu->NMILineAsserted && !cpu->NMILineAssertedPrevious)
     {
       // NMI was asserted, pend it
       CR1_Write(&cpu->NMIPendingInternal, true);
     }
 
-    cpu->NMILineAssertedPrevious = CR1_Read(cpu->NMILineAsserted);
+    cpu->NMILineAssertedPrevious = cpu->NMILineAsserted;
 
     // Next tick will be a rising clock edge
     cpu->IsRisingClockEdge = true;
@@ -252,6 +251,8 @@ void CPU_Tick(CPU_t *cpu)
         cpu->CyclesLeftForInstruction++;
       }
     }
+
+    cpu->InstructionCount++;
   }
 
   if (cpu->CyclesLeftForInstruction == 1)
