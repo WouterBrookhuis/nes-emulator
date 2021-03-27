@@ -33,9 +33,9 @@ void CPU_Reset(CPU_t *cpu)
   cpu->P = 0x24;
 }
 
-void CPU_NMI(CPU_t *cpu, uint8_t delay)
+void CPU_NMI(CPU_t *cpu, bool assert)
 {
-  cpu->PendingNMI = delay + 1;
+  CR1_Write(&cpu->NMILineAsserted, assert);
 }
 
 void CPU_Tick(CPU_t *cpu)
@@ -51,11 +51,42 @@ void CPU_Tick(CPU_t *cpu)
     return;
   }
 
+  // Clock prescaler of 12
+  if (cpu->ClockPhaseCounter == 0)
+  {
+    cpu->ClockPhaseCounter++;
+  }
+  else if (cpu->ClockPhaseCounter == 6)
+  {
+    // NMI edge detection
+    CR1_Clock(&cpu->NMILineAsserted);
+    if (CR1_Read(cpu->NMILineAsserted) && !cpu->NMILineAssertedPrevious)
+    {
+      // NMI was asserted, pend it
+      CR1_Write(&cpu->NMIPendingInternal, true);
+    }
+
+    cpu->NMILineAssertedPrevious = CR1_Read(cpu->NMILineAsserted);
+
+    cpu->ClockPhaseCounter++;
+    return;
+  }
+  else if (cpu->ClockPhaseCounter == 11)
+  {
+    cpu->ClockPhaseCounter = 0;
+    return;
+  }
+  else
+  {
+    cpu->ClockPhaseCounter++;
+    return;
+  }
+
   cpu->CycleCount++;
 
   if (cpu->CyclesLeftForInstruction == 0)
   {
-    if (cpu->PendingNMI == 1)
+    if (cpu->NextInstructionIsNMI)
     {
       // NMI takes priority over other things
       // Push PC (hi, then low)
@@ -74,14 +105,10 @@ void CPU_Tick(CPU_t *cpu)
       // NMI takes 7 cycles
       cpu->CyclesLeftForInstruction = 7;
 
-      cpu->PendingNMI = 0;
+      cpu->NextInstructionIsNMI = false;
     }
     else
     {
-      // Decrement the NMI counter
-      if (cpu->PendingNMI > 0)
-        cpu->PendingNMI--;
-
       // Time for a new instruction!
       cpu->Address = cpu->PC;
       cpu->Instruction = Bus_ReadFromCPU(cpu->Bus, cpu->PC);
@@ -232,6 +259,17 @@ void CPU_Tick(CPU_t *cpu)
       }
     }
   }
+  else if (cpu->CyclesLeftForInstruction == 1)
+  {
+    if (CR1_Read(cpu->NMIPendingInternal))
+    {
+      cpu->NextInstructionIsNMI = true;
+      CR1_Write(&cpu->NMIPendingInternal, false);
+    }
+  }
+
+  // Clock registers
+  CR1_Clock(&cpu->NMIPendingInternal);
 
   // Always decrement cycle counter
   cpu->CyclesLeftForInstruction--;

@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <SDL2/SDL.h>
+#include "ClockedRegister.h"
 
 typedef struct _Bus_t Bus_t;
 
@@ -42,19 +43,20 @@ typedef enum
 
 typedef struct _PPU_t
 {
+  unsigned int PhaseCounter;
   unsigned int FrameCount;
   unsigned int CycleCount;          // Total cycle count, debugging info
   unsigned int CyclesSinceReset;    // Amount of cycles since last reset
   Bus_t *Bus;               // The bus this PPU is connected to
 
   // Registers
-  uint8_t Ctrl;             // Control register, various things
-  uint8_t Mask;             // Mask register, rendering related flags
-  uint8_t Status;           // Status register, has PPU status flags
-  uint8_t OAMAddress;       // Address used for OAM access
-  uint8_t OAMData;          // Data register used to read or write data to OAM
-  uint8_t Scroll;           // Scroll register, used for writing scroll offsets
-  uint8_t Data;             // Data register used for read/write via PPU bus from CPU
+  cr8_t Ctrl;               // Control register, various things
+  cr8_t Mask;               // Mask register, rendering related flags
+  cr8_t Status;             // Status register, has PPU status flags
+  cr8_t OAMAddress;         // Address used for OAM access
+  cr8_t OAMData;            // Data register used to read or write data to OAM
+  cr8_t Scroll;             // Scroll register, used for writing scroll offsets
+  cr8_t Data;               // Data register used for read/write via PPU bus from CPU
 
   // Wonky things
   uint8_t AddressLatch;     // Address latch for '16 bit' registers like Address and Scroll
@@ -108,6 +110,7 @@ typedef struct _PPU_t
 
 void PPU_Initialize(PPU_t *ppu);
 void PPU_Tick(PPU_t *ppu);
+void PPU_ClockRegisters(PPU_t *ppu);
 void PPU_Reset(PPU_t *ppu);
 uint8_t PPU_ReadFromCpu(PPU_t *ppu, uint16_t address);
 void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data);

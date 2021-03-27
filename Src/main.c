@@ -174,7 +174,16 @@ static void Initialize()
   //const char * romFile = "Resources/vram_access.nes";
   //const char * romFile = "Resources/rom_singles/01-basics.nes";
   //const char * romFile = "Resources/ppu_vbl_nmi/rom_singles/10-even_odd_timing.nes";
-  const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/04-nmi_control.nes";
+  //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/01-vbl_basics.nes";
+  //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/02-vbl_set_time.nes";
+  //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/03-vbl_clear_time.nes";
+  //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/04-nmi_control.nes";
+  const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/05-nmi_timing.nes";
+  //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/06-suppression.nes";
+  //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/07-nmi_on_timing.nes";
+  //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/08-nmi_off_timing.nes";
+  //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/09-even_odd_frames.nes";
+  //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/10-even_odd_timing.nes";
   const char *paletteFile = "Resources/ntscpalette.pal";
   Bus_t *bus;
   CPU_t *cpu;
@@ -188,6 +197,7 @@ static void Initialize()
   else
   {
     LogError("Unable to load NES ROM, do not run system!");
+    exit(-1);
   }
 
   Palette_LoadFrom(paletteFile);
@@ -374,8 +384,8 @@ static bool Update(float deltaTime)
             "H:%03d V:%03d CTRL:%02X STAT:%02X FRAME:%d",
             ppu->HCount,
             ppu->VCount,
-            ppu->Ctrl,
-            ppu->Status,
+            ppu->Ctrl.currentValue,
+            ppu->Status.currentValue,
             ppu->FrameCount
             );
   }
@@ -452,12 +462,12 @@ static bool Update(float deltaTime)
 
   if (_stepKeyWasPressed)
   {
-//    if (cpu->CyclesLeftForInstruction == 0)
-//    {
-//      NES_TickClock();
-//    }
-//    NES_TickUntilCPUComplete();
-    NES_TickUntilFrameComplete();
+    if (cpu->CyclesLeftForInstruction == 0)
+    {
+      NES_TickClock();
+    }
+    NES_TickUntilCPUComplete();
+    //NES_TickUntilFrameComplete();
     _stepKeyWasPressed = false;
   }
 

@@ -24,8 +24,7 @@ static bool _isEvenCpuCycle;
 
 void NES_Initialize(void)
 {
-  _cpuClockDivisor = 3; //12;  // NTSC mode
-  _ppuClockDivisor = 1; //4;   // NTSC mode
+  _cpuClockDivisor = 12;  // NTSC mode
   _clockCycleCount = 0;
 
   CPU_Initialize(&_cpu);
@@ -39,17 +38,15 @@ void NES_Initialize(void)
 
 void NES_TickClock(void)
 {
-  if (_clockCycleCount % _ppuClockDivisor == 0)
-  {
-    PPU_Tick(&_ppu);
-  }
+  PPU_Tick(&_ppu);
+  CPU_Tick(&_cpu);
+
   if (_clockCycleCount % _cpuClockDivisor == 0)
   {
     // Handle DMA
     switch (_bus.DMA.State)
     {
     case DMA_STATE_IDLE:
-      CPU_Tick(&_cpu);
       break;
     case DMA_STATE_WAITING:
       if (!_isEvenCpuCycle)
@@ -81,6 +78,9 @@ void NES_TickClock(void)
 
     _isEvenCpuCycle = !_isEvenCpuCycle;
   }
+
+  PPU_ClockRegisters(&_ppu);
+
   _clockCycleCount++;
 }
 
