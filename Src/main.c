@@ -174,7 +174,7 @@ static void Initialize()
   //const char * romFile = "Resources/super mario bros.nes";
   //const char * romFile = "Resources/vram_access.nes";
   //const char * romFile = "Resources/rom_singles/01-basics.nes";
-  const char * romFile = "Resources/instr_test-v5/all_instrs.nes";
+  const char * romFile = "Resources/instr_test-v5/rom_singles/02-implied.nes";
   //const char *romFile = "Resources/nmi_sync/demo_ntsc.nes";
   //const char *romFile = "Resources/ppu_sprite_hit/ppu_sprite_hit.nes";
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/01-vbl_basics.nes";
