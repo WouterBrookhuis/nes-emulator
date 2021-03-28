@@ -882,17 +882,22 @@ int TAS(CPU_t *cpu)
   return 0;
 }
 
-// Illegal: Store Y & H into address
+// Illegal: Store Y & H into address (kind of)
 int SHY(CPU_t *cpu)
 {
-  Write(cpu, cpu->Address, cpu->Y & (cpu->Address >> 8));
+  // Weirdness: http://forums.nesdev.com/viewtopic.php?f=3&t=3831&start=30
+  uint8_t value = cpu->Y & ((cpu->Address >> 8) + 1);
+  uint16_t address = (value << 8) | (cpu->Address & 0xFF);
+  Write(cpu, address, value);
   return 0;
 }
 
-// Illegal: Store X & H into address
+// Illegal: Store X & H into address (kind of)
 int SHX(CPU_t *cpu)
 {
-  Write(cpu, cpu->Address, cpu->X & (cpu->Address >> 8));
+  uint8_t value = cpu->X & ((cpu->Address >> 8) + 1);
+  uint16_t address = (value << 8) | (cpu->Address & 0xFF);
+  Write(cpu, address, value);
   return 0;
 }
 

@@ -167,8 +167,9 @@ static void DrawPatternTable(Bus_t *bus, uint16_t tableStart, SDL_Surface *surfa
 
 static void Initialize()
 {
-  //const char * romFile = "Resources/instr_test-v5/all_instrs.nes";
-  const char * romFile = "Resources/instr_test-v5/rom_singles/03-immediate.nes";
+  const char * romFile = "Resources/instr_test-v5/all_instrs.nes";
+  //const char * romFile = "Resources/instr_test-v5/rom_singles/03-immediate.nes";
+  //const char * romFile = "Resources/instr_test-v5/rom_singles/07-abs_xy.nes";
   //const char * romFile = "Resources/instr_timing/instr_timing.nes";
   //const char * romFile = "Resources/oam_stress/oam_stress.nes";
   //const char * romFile = "Resources/official_only.nes";
