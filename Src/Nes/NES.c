@@ -14,8 +14,6 @@
 #include "log.h"
 
 static int _clockCycleCount;
-static int _cpuClockDivisor;
-static int _ppuClockDivisor;
 static CPU_t _cpu;
 static Bus_t _bus;
 static PPU_t _ppu;
@@ -27,7 +25,6 @@ static uint8_t _cpuTicker;
 
 void NES_Initialize(void)
 {
-  _cpuClockDivisor = 12;  // NTSC mode
   _clockCycleCount = 0;
 
   CPU_Initialize(&_cpu);
@@ -53,7 +50,7 @@ void NES_TickClock(void)
     {
       CPU_Tick(&_cpu);
     }
-    else if ((_bus.DMA.State == DMA_STATE_RUNNING) && (_cpuTicker == 3))
+    else if ((_bus.DMA.State == DMA_STATE_WAITING) && (_cpuTicker == 3))
     {
       // DMA can only start on even cycles, so if this was an odd cycle the next one is even
       _bus.DMA.State = DMA_STATE_RUNNING;
