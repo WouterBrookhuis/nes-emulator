@@ -10,6 +10,7 @@
 #include "CPU.h"
 #include "Bus.h"
 #include "PPU.h"
+#include "APU.h"
 #include "Controllers.h"
 #include "log.h"
 
@@ -17,6 +18,7 @@ static int _clockCycleCount;
 static CPU_t _cpu;
 static Bus_t _bus;
 static PPU_t _ppu;
+static APU_t _apu;
 static bool _ppuLastFrameEven;
 static bool _isEvenCpuCycle;
 
@@ -29,7 +31,8 @@ void NES_Initialize(void)
 
   CPU_Initialize(&_cpu);
   PPU_Initialize(&_ppu);
-  Bus_Initialize(&_bus, &_cpu, &_ppu);
+  APU_Initialize(&_apu);
+  Bus_Initialize(&_bus, &_cpu, &_ppu, &_apu);
   Controllers_Initialize(2);
 
   _ppuLastFrameEven = _ppu.IsEvenFrame;

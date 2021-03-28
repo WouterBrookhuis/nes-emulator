@@ -13,6 +13,7 @@
 
 typedef struct _PPU_t PPU_t;
 typedef struct _CPU_t CPU_t;
+typedef struct _APU_t APU_t;
 typedef struct _Mapper_t Mapper_t;
 
 typedef enum
@@ -34,6 +35,7 @@ typedef struct _Bus_t
 {
   CPU_t *CPU;
   PPU_t *PPU;
+  APU_t *APU;
   Mapper_t *Mapper;
   DMA_t DMA;
 } Bus_t;
@@ -42,7 +44,7 @@ void Bus_TriggerDMA(Bus_t *bus, uint8_t cpuPage);
 
 void Bus_NMI(Bus_t *bus, bool assert);
 
-void Bus_Initialize(Bus_t *bus, CPU_t *cpu, PPU_t *ppu);
+void Bus_Initialize(Bus_t *bus, CPU_t *cpu, PPU_t *ppu, APU_t *apu);
 
 void Bus_SetMapper(Bus_t *bus, Mapper_t *mapper);
 

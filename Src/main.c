@@ -171,12 +171,12 @@ static void Initialize()
   //const char * romFile = "Resources/instr_test-v5/rom_singles/03-immediate.nes";
   //const char * romFile = "Resources/instr_test-v5/rom_singles/07-abs_xy.nes";
   //const char * romFile = "Resources/instr_timing/instr_timing.nes";
-  //const char * romFile = "Resources/oam_stress/oam_stress.nes";
   //const char * romFile = "Resources/official_only.nes";
   //const char * romFile = "Resources/nestest.nes";
   //const char * romFile = "Resources/donkey kong.nes";
   //const char * romFile = "Resources/super mario bros.nes";
-  const char * romFile = "Resources/sprite_ram.nes";
+  const char *romFile = "Resources/apu_test/apu_test.nes";
+  //const char * romFile = "Resources/power_up_palette.nes";
   //const char * romFile = "Resources/instr_test-v5/rom_singles/02-implied.nes";
   //const char *romFile = "Resources/nmi_sync/demo_ntsc.nes";
   //const char *romFile = "Resources/ppu_sprite_hit/ppu_sprite_hit.nes";
@@ -192,6 +192,7 @@ static void Initialize()
   //const char *romFile = "Resources/ppu_vbl_nmi/rom_singles/10-even_odd_timing.nes";
   //const char *romFile = "Resources/cpu_timing_test6/cpu_timing_test.nes";
   //const char *romFile = "Resources/cpu_interrupts_v2/rom_singles/2-nmi_and_brk.nes";
+  //const char *romFile = "Resources/ntsc_torture.nes";
   const char *paletteFile = "Resources/ntscpalette.pal";
   Bus_t *bus;
   CPU_t *cpu;

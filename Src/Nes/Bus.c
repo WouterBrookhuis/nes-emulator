@@ -8,6 +8,7 @@
 #include "Bus.h"
 #include "CPU.h"
 #include "PPU.h"
+#include "APU.h"
 #include "log.h"
 #include "Controllers.h"
 
@@ -24,7 +25,7 @@ static uint8_t ReadNametableDefault(Bus_t *bus, uint16_t address);
 
 static void WriteNametableDefault(Bus_t *bus, uint16_t address, uint8_t data);
 
-void Bus_Initialize(Bus_t *bus, CPU_t *cpu, PPU_t *ppu)
+void Bus_Initialize(Bus_t *bus, CPU_t *cpu, PPU_t *ppu, APU_t *apu)
 {
   memset(bus, 0, sizeof(*bus));
   // Link CPU and bus together
@@ -34,6 +35,9 @@ void Bus_Initialize(Bus_t *bus, CPU_t *cpu, PPU_t *ppu)
   bus->PPU = ppu;
   ppu->Bus = bus;
   bus->DMA.State = DMA_STATE_IDLE;
+  // Link APU and bus together
+  bus->APU = apu;
+  apu->Bus = bus;
 }
 
 void Bus_SetMapper(Bus_t *bus, Mapper_t *mapper)
@@ -84,7 +88,7 @@ uint8_t Bus_ReadFromCPU(Bus_t *bus, uint16_t address)
     }
     else
     {
-      data = 0;
+      data = APU_ReadFromCpu(bus->APU, address);
     }
   }
   else if (address < 0x4020)
@@ -128,9 +132,13 @@ void Bus_WriteFromCPU(Bus_t *bus, uint16_t address, uint8_t data)
     {
       Controllers_Write(0, data);
     }
-    else if (address == 0x4017)
+//    else if (address == 0x4017)
+//    {
+//      Controllers_Write(1, data);
+//    }
+    else
     {
-      Controllers_Write(1, data);
+      APU_WriteFromCpu(bus->APU, address, data);
     }
   }
   else if (address < 0x4020)
