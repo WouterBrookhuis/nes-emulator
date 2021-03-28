@@ -41,6 +41,11 @@ void CPU_NMI(CPU_t *cpu, bool assert)
   cpu->NMILineAsserted = assert;
 }
 
+void CPU_IRQ(CPU_t *cpu, bool assert)
+{
+  cpu->IRQLineAsserted = assert;
+}
+
 void CPU_Tick(CPU_t *cpu)
 {
   const InstructionTableEntry_t *newInstruction;
@@ -58,6 +63,9 @@ void CPU_Tick(CPU_t *cpu)
     }
 
     cpu->NMILineAssertedPrevious = cpu->NMILineAsserted;
+
+    // IRQ level detection
+    CR1_Write(&cpu->IRQPendingInternal, cpu->IRQLineAsserted);
 
     // Next tick will be a rising clock edge
     cpu->IsRisingClockEdge = true;
@@ -99,6 +107,27 @@ void CPU_Tick(CPU_t *cpu)
       cpu->CyclesLeftForInstruction = 7;
 
       cpu->NextInstructionIsNMI = false;
+    }
+    else if (cpu->NextInstructionIsIRQ && ((cpu->P & PFLAG_INTDISABLE) == 0))
+    {
+      // IRQ takes priority over other things, but not an NMI
+      // Push PC (hi, then low)
+      Push(cpu, cpu->PC >> 8);
+      Push(cpu, (uint8_t)cpu->PC);
+      // Push P
+      uint8_t statusByte = cpu->P;
+      // Set B flag correctly before pushing
+      SetFlag(&statusByte, PFLAG_B0, false);  // 1 = BRK, 0 = NMI/IRQ
+      SetFlag(&statusByte, PFLAG_B1, true);   // Always 1
+      Push(cpu, statusByte);
+      // Put IRQ vector in PC
+      cpu->PC = Read16(cpu, IRQ_VECTOR_LOCATION);
+      // Set interrupt disable flag
+      SetFlag(&cpu->P, PFLAG_INTDISABLE, true);
+      // IRQ takes 7 cycles
+      cpu->CyclesLeftForInstruction = 7;
+
+      cpu->NextInstructionIsIRQ = false;
     }
     else
     {
@@ -262,10 +291,13 @@ void CPU_Tick(CPU_t *cpu)
       cpu->NextInstructionIsNMI = true;
       CR1_Write(&cpu->NMIPendingInternal, false);
     }
+
+    cpu->NextInstructionIsIRQ = CR1_Read(cpu->IRQPendingInternal);
   }
 
   // Clock registers
   CR1_Clock(&cpu->NMIPendingInternal);
+  CR1_Clock(&cpu->IRQPendingInternal);
 
   // Always decrement cycle counter
   cpu->CyclesLeftForInstruction--;

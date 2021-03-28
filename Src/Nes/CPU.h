@@ -39,13 +39,17 @@ typedef struct _CPU_t
   bool IsRisingClockEdge;
   bool NMILineAssertedPrevious;
   bool NMILineAsserted;
+  bool IRQLineAsserted;
+  cr1_t IRQPendingInternal;
   cr1_t NMIPendingInternal;
   bool NextInstructionIsNMI;
+  bool NextInstructionIsIRQ;
 } CPU_t;
 
 void CPU_Initialize(CPU_t *cpu);
 void CPU_Tick(CPU_t *cpu);
 void CPU_Reset(CPU_t *cpu);
 void CPU_NMI(CPU_t *cpu, bool assert);
+void CPU_IRQ(CPU_t *cpu, bool assert);
 
 #endif /* SRC_NES_CPU_H_ */

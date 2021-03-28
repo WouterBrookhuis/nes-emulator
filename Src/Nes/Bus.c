@@ -58,6 +58,11 @@ void Bus_NMI(Bus_t *bus, bool assert)
   CPU_NMI(bus->CPU, assert);
 }
 
+void Bus_IRQ(Bus_t *bus, bool assert)
+{
+  CPU_IRQ(bus->CPU, assert);
+}
+
 uint8_t Bus_ReadFromCPU(Bus_t *bus, uint16_t address)
 {
   uint8_t data;

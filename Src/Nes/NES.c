@@ -77,6 +77,12 @@ void NES_TickClock(void)
     }
   }
 
+  if (_cpuTicker == 0)
+  {
+    // Tick APU after the CPU, it will also clock the registers
+    APU_Tick(&_apu);
+  }
+
   if (_ppuTicker == 0)
   {
     PPU_ClockRegisters(&_ppu);

@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "ClockedRegister.h"
 
 typedef struct _Bus_t Bus_t;
 
@@ -25,6 +26,8 @@ typedef enum
   APU_STATUS_FLAG_DMC_INT = 0x80,       // DMC interrupt status flag
 } APU_StatusFlags_t;
 
+#define APU_STATUS_FLAGS_WRITABLE   (0x1F)    // The status register bits that can be written by CPU
+
 typedef enum
 {
   APU_FRAME_FLAG_MASK = 0xC0,           // Mask for the flags in the FrameCounter register
@@ -36,8 +39,13 @@ typedef struct _APU_t
 {
   Bus_t *Bus;       // The bus we are attached to
 
-  uint8_t Status;             // The status register at 0x4015
-  uint8_t FrameCounter;       // Frame counter register at 0x4017
+  uint_fast16_t HalfClockCounter;   // Counts half APU clock cycles (1 APU clock = 2 CPU clock)
+
+
+
+  cr8_t Status;             // The status register at 0x4015
+  cr8_t FrameCounter;       // Frame counter register at 0x4017
+  cr1_t FrameCounterWritten;    // ??
 } APU_t;
 
 void APU_Initialize(APU_t *apu);

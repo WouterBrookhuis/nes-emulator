@@ -44,6 +44,8 @@ void Bus_TriggerDMA(Bus_t *bus, uint8_t cpuPage);
 
 void Bus_NMI(Bus_t *bus, bool assert);
 
+void Bus_IRQ(Bus_t *bus, bool assert);
+
 void Bus_Initialize(Bus_t *bus, CPU_t *cpu, PPU_t *ppu, APU_t *apu);
 
 void Bus_SetMapper(Bus_t *bus, Mapper_t *mapper);

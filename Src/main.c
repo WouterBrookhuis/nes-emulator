@@ -20,6 +20,7 @@
 #include "Nes/Bus.h"
 #include "Nes/Palette.h"
 #include "Nes/Controllers.h"
+#include "Nes/APU.h"
 
 static void Initialize(void);
 
@@ -56,6 +57,14 @@ static void Event(SDL_Event* event);
 #define OAM_VIEW_ENTRIES    22
 #define OAM_VIEW_CHARS_PER_ROW  25
 
+typedef enum
+{
+  DETAIL_MODE_CPU,
+  DETAIL_MODE_PPU,
+  DETAIL_MODE_APU,
+  NR_OF_DETAIL_MODES,
+} DetailMode_t;
+
 static Font_t _font;
 static char _statusBarBuffer[STATUS_BAR_CHARS_PER_ROW * STATUS_BAR_ROWS + 1];
 static char _textBuffer[128];
@@ -68,7 +77,7 @@ static bool _frameStepKeyWasPressed;
 static bool _runKeyWasPressed;
 static bool _statusKeyWasPressed;
 static bool _run;
-static bool _showCpu;
+static DetailMode_t _detailMode;;
 static char _lastLoadedFileName[512];
 static SDL_Surface *_ppuRenderSurface;
 static uint8_t _patternTableDrawIndex = 2;
@@ -349,10 +358,12 @@ static bool Update(float deltaTime)
   CPU_t *cpu;
   Bus_t *bus;
   PPU_t *ppu;
+  APU_t *apu;
   const InstructionTableEntry_t *instr;
   cpu = NES_GetCPU();
   bus = NES_GetBus();
   ppu = NES_GetPPU();
+  apu = bus->APU;
 
   instr = InstructionTable_GetInstruction(cpu->Instruction);
 
@@ -369,11 +380,13 @@ static bool Update(float deltaTime)
   if (_statusKeyWasPressed)
   {
     _statusKeyWasPressed = false;
-    _showCpu = !_showCpu;
+    _detailMode = (_detailMode + 1) % NR_OF_DETAIL_MODES;
   }
 
   // Second row: CPU status
-  if (_showCpu)
+  switch (_detailMode)
+  {
+  case DETAIL_MODE_CPU:
   {
     snprintf(&_statusBarBuffer[STATUS_BAR_CHARS_PER_ROW],
             STATUS_BAR_CHARS_PER_ROW + 1,
@@ -388,8 +401,9 @@ static bool Update(float deltaTime)
             cpu->P,
             cpu->CycleCount
             );
+    break;
   }
-  else
+  case DETAIL_MODE_PPU:
   {
     // Second row: PPU status
     snprintf(&_statusBarBuffer[STATUS_BAR_CHARS_PER_ROW],
@@ -401,6 +415,20 @@ static bool Update(float deltaTime)
             ppu->Status.currentValue,
             ppu->FrameCount
             );
+    break;
+  }
+  case DETAIL_MODE_APU:
+  {
+    // Second row: APU status
+    snprintf(&_statusBarBuffer[STATUS_BAR_CHARS_PER_ROW],
+            STATUS_BAR_CHARS_PER_ROW + 1,
+            "CNT:%08u S:%02X F:%02X",
+            apu->HalfClockCounter,
+            apu->Status.currentValue,
+            apu->FrameCounter.currentValue
+            );
+    break;
+  }
   }
 
 
@@ -534,7 +562,7 @@ static void Draw(SDL_Surface* surface)
   Text_DrawStringWrapping(surface, _statusBarBuffer, 0, 0, STATUS_BAR_CHARS_PER_ROW, &_font);
 
   // Debug view
-  if (_showCpu)
+  if ((_detailMode == DETAIL_MODE_CPU) || (_detailMode == DETAIL_MODE_APU))
   {
     // Memory view
     Text_DrawString(surface, "Memory view", nesScreenRect.w, STATUS_BAR_HEIGHT, &_font);
