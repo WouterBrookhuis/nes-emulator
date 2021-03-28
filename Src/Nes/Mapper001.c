@@ -172,6 +172,7 @@ void Mapper001_Initialize(Mapper_t *mapper, INesHeader_t *header)
   memset(mapper, 0, sizeof(*mapper));
 
   mapper->MapperId = 0x01;
+  mapper->Mirror = header->Flags6 & INES_FLAGS6_MIRROR_VERTICAL ? MIRROR_MODE_VERTICAL : MIRROR_MODE_HORIZONTAL;
   mapper->MemorySize = header->PrgRomSize * SIZE_16KB + header->ChrRomSize * SIZE_8KB;
   // TODO: Check for malloc failure
   mapper->Memory = malloc((size_t) mapper->MemorySize);

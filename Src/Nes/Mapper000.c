@@ -126,7 +126,6 @@ bool Mapper000_ReadFromPpu(Mapper_t *mapper,
                            uint16_t address,
                            uint8_t *data)
 {
-  //Mapper000Data_t *customData = (Mapper000Data_t*) mapper->CustomData;
   if (address >= 0x0000 && address <= 0x1FFF)
   {
     if (mapper->NumChrBanks > 0)
@@ -144,7 +143,6 @@ bool Mapper000_WriteFromPpu(Mapper_t *mapper,
                             uint16_t address,
                             uint8_t data)
 {
-  //Mapper000Data_t *customData = (Mapper000Data_t*) mapper->CustomData;
   return false;
 }
 
