@@ -167,13 +167,15 @@ static void DrawPatternTable(Bus_t *bus, uint16_t tableStart, SDL_Surface *surfa
 
 static void Initialize()
 {
-  //const char * romFile = "Resources/all_instrs.nes";
+  //const char * romFile = "Resources/instr_test-v5/all_instrs.nes";
+  const char * romFile = "Resources/instr_test-v5/rom_singles/03-immediate.nes";
+  //const char * romFile = "Resources/instr_timing/instr_timing.nes";
+  //const char * romFile = "Resources/oam_stress/oam_stress.nes";
   //const char * romFile = "Resources/official_only.nes";
   //const char * romFile = "Resources/nestest.nes";
   //const char * romFile = "Resources/donkey kong.nes";
-  const char * romFile = "Resources/super mario bros.nes";
+  //const char * romFile = "Resources/super mario bros.nes";
   //const char * romFile = "Resources/vram_access.nes";
-  //const char * romFile = "Resources/rom_singles/01-basics.nes";
   //const char * romFile = "Resources/instr_test-v5/rom_singles/02-implied.nes";
   //const char *romFile = "Resources/nmi_sync/demo_ntsc.nes";
   //const char *romFile = "Resources/ppu_sprite_hit/ppu_sprite_hit.nes";

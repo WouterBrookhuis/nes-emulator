@@ -12,6 +12,7 @@
 
 const static InstructionTableEntry_t TABLE[] =
 {
+    // 0X
     { BRK, ADDR_IMP, 7, "BRK" },
     { ORA, ADDR_IZX, 6, "ORA" },
     { KIL, ADDR_IMM, 1, "KIL" },
@@ -29,6 +30,7 @@ const static InstructionTableEntry_t TABLE[] =
     { ASL, ADDR_ABS, 6, "ASL" },
     { SLO, ADDR_ABS, 6, "SLO" },
 
+    // 1X
     { BPL, ADDR_REL, 2, "BPL" },
     { ORA, ADDR_IZY, 5, "ORA" },
     { KIL, ADDR_IMM, 1, "KIL" },
@@ -46,6 +48,7 @@ const static InstructionTableEntry_t TABLE[] =
     { ASL, ADDR_ABX, 7, "ASL" },
     { SLO, ADDR_ABX, 7, "SLO" },
 
+    // 2X
     { JSR, ADDR_ABS, 6, "JSR" },
     { AND, ADDR_IZX, 6, "AND" },
     { KIL, ADDR_IMM, 1, "KIL" },
@@ -63,6 +66,7 @@ const static InstructionTableEntry_t TABLE[] =
     { ROL, ADDR_ABS, 6, "ROL" },
     { RLA, ADDR_ABS, 6, "RLA" },
 
+    // 3X
     { BMI, ADDR_REL, 2, "BMI" },
     { AND, ADDR_IZY, 5, "AND" },
     { KIL, ADDR_IMM, 1, "KIL" },
@@ -80,6 +84,7 @@ const static InstructionTableEntry_t TABLE[] =
     { ROL, ADDR_ABX, 7, "ROL" },
     { RLA, ADDR_ABX, 7, "RLA" },
 
+    // 4X
     { RTI, ADDR_IMP, 6, "RTI" },
     { EOR, ADDR_IZX, 6, "EOR" },
     { KIL, ADDR_IMM, 1, "KIL" },
@@ -97,6 +102,7 @@ const static InstructionTableEntry_t TABLE[] =
     { LSR, ADDR_ABS, 6, "LSR" },
     { SRE, ADDR_ABS, 6, "SRE" },
 
+    // 5X
     { BVC, ADDR_REL, 2, "BVC" },
     { EOR, ADDR_IZY, 5, "EOR" },
     { KIL, ADDR_IMM, 1, "KIL" },
@@ -114,6 +120,7 @@ const static InstructionTableEntry_t TABLE[] =
     { LSR, ADDR_ABX, 7, "LSR" },
     { SRE, ADDR_ABX, 7, "SRE" },
 
+    // 6X
     { RTS, ADDR_IMM, 6, "RTS" },
     { ADC, ADDR_IZX, 6, "ADC" },
     { KIL, ADDR_IMM, 1, "KIL" },
@@ -131,6 +138,7 @@ const static InstructionTableEntry_t TABLE[] =
     { ROR, ADDR_ABS, 6, "ROR" },
     { RRA, ADDR_ABS, 6, "RRA" },
 
+    // 7X
     { BVS, ADDR_REL, 2, "BVS" },
     { ADC, ADDR_IZY, 5, "ADC" },
     { KIL, ADDR_IMM, 1, "KIL" },
@@ -148,6 +156,7 @@ const static InstructionTableEntry_t TABLE[] =
     { ROR, ADDR_ABX, 7, "ROR" },
     { RRA, ADDR_ABX, 7, "RRA" },
 
+    // 8X
     { NOP, ADDR_IMM, 2, "NOP" },
     { STA, ADDR_IZX, 6, "STA" },
     { NOP, ADDR_IMM, 2, "NOP" },
@@ -165,6 +174,7 @@ const static InstructionTableEntry_t TABLE[] =
     { STX, ADDR_ABS, 4, "STX" },
     { SAX, ADDR_ABS, 4, "SAX" },
 
+    // 9X
     { BCC, ADDR_REL, 2, "BCC" },
     { STA, ADDR_IZY, 6, "STA" },
     { KIL, ADDR_IMM, 1, "KIL" },
@@ -182,6 +192,7 @@ const static InstructionTableEntry_t TABLE[] =
     { SHX, ADDR_ABY, 5, "SHX" },
     { AHX, ADDR_ABY, 5, "AHX" },
 
+    // AX
     { LDY, ADDR_IMM, 2, "LDY" },
     { LDA, ADDR_IZX, 6, "LDA" },
     { LDX, ADDR_IMM, 2, "LDX" },
@@ -199,6 +210,7 @@ const static InstructionTableEntry_t TABLE[] =
     { LDX, ADDR_ABS, 4, "LDX" },
     { LAX, ADDR_ABS, 4, "LAX" },
 
+    // BX
     { BCS, ADDR_REL, 2, "BCS" },
     { LDA, ADDR_IZY, 5, "LDA" },
     { KIL, ADDR_IMM, 1, "KIL" },
@@ -216,6 +228,7 @@ const static InstructionTableEntry_t TABLE[] =
     { LDX, ADDR_ABY, 4, "LDX" },
     { LAX, ADDR_ABY, 4, "LAX" },
 
+    // CX
     { CPY, ADDR_IMM, 2, "CPY" },
     { CMP, ADDR_IZX, 6, "CMP" },
     { NOP, ADDR_IMM, 2, "NOP" },
@@ -233,6 +246,7 @@ const static InstructionTableEntry_t TABLE[] =
     { DEC, ADDR_ABS, 6, "DEC" },
     { DCP, ADDR_ABS, 6, "DCP" },
 
+    // DX
     { BNE, ADDR_REL, 2, "BNE" },
     { CMP, ADDR_IZY, 5, "CMP" },
     { KIL, ADDR_IMM, 1, "KIL" },
@@ -250,6 +264,7 @@ const static InstructionTableEntry_t TABLE[] =
     { DEC, ADDR_ABX, 7, "DEC" },
     { DCP, ADDR_ABX, 7, "DCP" },
 
+    // EX
     { CPX, ADDR_IMM, 2, "CPX" },
     { SBC, ADDR_IZX, 6, "SBC" },
     { NOP, ADDR_IMM, 2, "NOP" },
@@ -267,6 +282,7 @@ const static InstructionTableEntry_t TABLE[] =
     { INC, ADDR_ABS, 6, "INC" },
     { ISC, ADDR_ABS, 6, "ISC" },
 
+    // FX
     { BEQ, ADDR_REL, 2, "BEQ" },
     { SBC, ADDR_IZY, 5, "SBC" },
     { KIL, ADDR_IMM, 1, "KIL" },

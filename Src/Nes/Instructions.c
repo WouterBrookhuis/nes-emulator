@@ -44,13 +44,13 @@ int AHX(CPU_t *cpu)
 // Illegal: And with immediate and shift right
 int ALR(CPU_t *cpu)
 {
-  // TODO: Is broken, pls fix?
   uint16_t temp = cpu->A & Read(cpu, cpu->Address);
+  // Carry flag is the bit that will be shifted out
+  SetFlag(&cpu->P, PFLAG_CARRY, temp & 1);
   temp >>= 1;
   cpu->A = temp;
-  // Set N, Z, C
+  // Set N, Z
   SetFlag(&cpu->P, PFLAG_NEGATIVE, cpu->A & 0x80);
-  SetFlag(&cpu->P, PFLAG_CARRY, temp > 255);
   SetFlag(&cpu->P, PFLAG_ZERO, cpu->A == 0x00);
   return 0;
 }
@@ -66,19 +66,37 @@ int ANC(CPU_t *cpu)
 // Illegal: A AND Immediate and then ROR
 int ARR(CPU_t *cpu)
 {
-  // TODO: ALR fails test?
-  AND(cpu);
-  ROR(cpu);
+  cpu->A = cpu->A & Read(cpu, cpu->Address);
+  cpu->A >>= 1;
+  // Exchange original MSB (before shift) with carry flag
+  if (IsFlagSet(&cpu->P, PFLAG_CARRY))
+  {
+    cpu->A |= 0x80;
+  }
+  SetFlag(&cpu->P, PFLAG_CARRY, cpu->A & 0x40);
+
+  // N and Z as usual
+  SetFlag(&cpu->P, PFLAG_NEGATIVE, cpu->A & 0x80);
+  SetFlag(&cpu->P, PFLAG_ZERO, cpu->A == 0x00);
+
+  // Overflow based on XOR with resulting bits 5 and 6
+  SetFlag(&cpu->P, PFLAG_OVERFLOW, ((cpu->A >> 6) ^ (cpu->A >> 5)) & 0x01);
+
   return 0;
 }
 
-// Illegal: AND X and A, store it in memory
+// Illegal: (A AND X) - IMM
 int AXS(CPU_t *cpu)
 {
-  // TODO: ALR fails test?
-  // Just AND and write, no flags to set
-  uint8_t temp = cpu->X & cpu->A;
-  Write(cpu, cpu->Address, temp);
+  uint8_t mem = Read(cpu, cpu->Address);
+  cpu->X = cpu->A & cpu->X;
+
+  uint16_t temp = cpu->X + ~mem + 1;
+  SetFlag(&cpu->P, PFLAG_CARRY, cpu->X >= mem);
+  SetFlag(&cpu->P, PFLAG_NEGATIVE, temp & 0x80);
+  SetFlag(&cpu->P, PFLAG_ZERO, (temp & 0xFF) == 0x00);
+  cpu->X = (uint8_t) temp;
+
   return 0;
 }
 

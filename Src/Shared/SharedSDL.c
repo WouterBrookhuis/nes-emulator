@@ -84,7 +84,7 @@ int SharedSDL_Start()
   uint32_t frameEndTicks;
   uint32_t frameTickDuration;
 
-  LogMessage("PerfCounterFrequency = %ul", SDL_GetPerformanceFrequency());
+  LogMessage("PerfCounterFrequency = %lu", SDL_GetPerformanceFrequency());
 
   while (run)
   {
@@ -148,13 +148,15 @@ int SharedSDL_Start()
 //    SharedSDL_PrintTiming(2, "PPU");
 //    SharedSDL_PrintTiming(3, "CPU");
 
-    for(uint_fast8_t i = 0; i < 5; i++)
-    {
-      printf("%I64u, ", _perfTimerAccum[i]);
-      SharedSDL_ResetTiming(i);
-    }
+    fflush(stdout);
 
-    printf("\n");
+//    for(uint_fast8_t i = 0; i < 5; i++)
+//    {
+//      printf("%I64u, ", _perfTimerAccum[i]);
+//      SharedSDL_ResetTiming(i);
+//    }
+//
+//    printf("\n");
   }
 
   //close_window_on_error:

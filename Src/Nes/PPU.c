@@ -194,6 +194,7 @@ void PPU_Tick(PPU_t *ppu)
 
   // Do PPU things
   // Address increment things
+  // TODO: Shouldn't this be moved down?
   if (IsRendering(ppu) && ppu->VCount >= -1 && ppu->VCount <= 239)
   {
     if (ppu->HCount == 256)
@@ -491,6 +492,7 @@ void PPU_Tick(PPU_t *ppu)
     }
   }
 
+  // NMI line is enabled iff it's enabled in CTRL and STATUS has VBLANK active
   Bus_NMI(ppu->Bus, CR8_IsBitSet(ppu->Ctrl, CTRLFLAG_VBLANK_NMI) && CR8_IsBitSet(ppu->Status, STATFLAG_VBLANK));
 
   // Try to render a pixel

@@ -13,6 +13,15 @@
 
 #include "Mapper.h"
 
+#define INES_FLAGS6_MIRROR_VERTICAL     (0x01)
+#define INES_FLAGS6_BATTERY_RAM         (0x02)
+#define INES_FLAGS6_TRAINER             (0x04)
+#define INES_FLAGS6_FOUR_SCREEN_VRAM    (0x08)
+#define INES_FLAGS6_MAPPER_MASK         (0xF0)
+#define INES_FLAGS6_MAPPER_SHIFT        (4)
+
+#define INES_FLAGS7_MAPPER_MASK         (0xF0)
+
 #define SIZE_16KB   16384
 #define SIZE_8KB    8192
 

@@ -35,15 +35,14 @@ bool INesLoader_Load(const char* file, Mapper_t* mapper)
     return false;
   }
 
-  if (header.Flags6 & 0x01)
-  {
-    // Mirroring
-  }
-
-  if (header.Flags6 & 0x02)
-  {
-    // Battery
-  }
+  LogMessage("Loading file %s", file);
+  LogMessage("Mapper PRG ROM: %u x 16k", header.PrgRomSize);
+  LogMessage("Mapper CHR ROM: %u x 8k", header.ChrRomSize);
+  LogMessage("Mapper flags6: 0x%02X", header.Flags6);
+  LogMessage("Mapper flags7: 0x%02X", header.Flags7);
+  LogMessage("Mapper flags8: 0x%02X", header.Flags8);
+  LogMessage("Mapper flags9: 0x%02X", header.Flags9);
+  LogMessage("Mapper flagsA: 0x%02X", header.Flags10);
 
   if (header.Flags6 & 0x04)
   {
@@ -56,21 +55,16 @@ bool INesLoader_Load(const char* file, Mapper_t* mapper)
     }
   }
 
-  if (header.Flags6 & 0x08)
-  {
-    // Ignore mirroring
-  }
-
-  uint8_t mapperId = ((header.Flags6 >> 4) & 0x0F) | (header.Flags7 & 0xF0);
+  uint8_t mapperId = ((header.Flags6 & INES_FLAGS6_MAPPER_MASK) >> INES_FLAGS6_MAPPER_SHIFT) | (header.Flags7 & INES_FLAGS7_MAPPER_MASK);
 
   switch (mapperId)
   {
   case 0x00:
     Mapper000_Initialize(mapper, &header);
     break;
-//  case 0x01:
-//    Mapper001_Initialize(mapper, &header);
-//    break;
+  case 0x01:
+    Mapper001_Initialize(mapper, &header);
+    break;
   default:
     fclose(f);
     LogError("Mapper id %u in file %s is not supported", mapperId, file);
