@@ -108,27 +108,28 @@ void CPU_Tick(CPU_t *cpu)
 
       cpu->NextInstructionIsNMI = false;
     }
-    else if (cpu->NextInstructionIsIRQ && ((cpu->P & PFLAG_INTDISABLE) == 0))
-    {
-      // IRQ takes priority over other things, but not an NMI
-      // Push PC (hi, then low)
-      Push(cpu, cpu->PC >> 8);
-      Push(cpu, (uint8_t)cpu->PC);
-      // Push P
-      uint8_t statusByte = cpu->P;
-      // Set B flag correctly before pushing
-      SetFlag(&statusByte, PFLAG_B0, false);  // 1 = BRK, 0 = NMI/IRQ
-      SetFlag(&statusByte, PFLAG_B1, true);   // Always 1
-      Push(cpu, statusByte);
-      // Put IRQ vector in PC
-      cpu->PC = Read16(cpu, IRQ_VECTOR_LOCATION);
-      // Set interrupt disable flag
-      SetFlag(&cpu->P, PFLAG_INTDISABLE, true);
-      // IRQ takes 7 cycles
-      cpu->CyclesLeftForInstruction = 7;
-
-      cpu->NextInstructionIsIRQ = false;
-    }
+    // TODO: Implement IRQ handling
+//    else if (cpu->NextInstructionIsIRQ && ((cpu->P & PFLAG_INTDISABLE) == 0))
+//    {
+//      // IRQ takes priority over other things, but not an NMI
+//      // Push PC (hi, then low)
+//      Push(cpu, cpu->PC >> 8);
+//      Push(cpu, (uint8_t)cpu->PC);
+//      // Push P
+//      uint8_t statusByte = cpu->P;
+//      // Set B flag correctly before pushing
+//      SetFlag(&statusByte, PFLAG_B0, false);  // 1 = BRK, 0 = NMI/IRQ
+//      SetFlag(&statusByte, PFLAG_B1, true);   // Always 1
+//      Push(cpu, statusByte);
+//      // Put IRQ vector in PC
+//      cpu->PC = Read16(cpu, IRQ_VECTOR_LOCATION);
+//      // Set interrupt disable flag
+//      SetFlag(&cpu->P, PFLAG_INTDISABLE, true);
+//      // IRQ takes 7 cycles
+//      cpu->CyclesLeftForInstruction = 7;
+//
+//      cpu->NextInstructionIsIRQ = false;
+//    }
     else
     {
       // Time for a new instruction!

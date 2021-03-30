@@ -71,6 +71,12 @@ void PPU_RenderPixel(PPU_t *ppu, int x, int y, uint8_t pixel, uint8_t palette)
     return;
   }
 
+  // Palette entry 0 always maps to the universal background of palette 0
+  if (pixel == 0)
+  {
+    palette = 0;
+  }
+
   uint8_t colorPaletteIndex = Bus_ReadFromPPU(ppu->Bus, 0x3F00 + (palette << 2) + pixel);
   if (CR8_IsBitSet(ppu->Mask, MASKFLAG_GREYSCALE))
   {
@@ -193,33 +199,6 @@ void PPU_Tick(PPU_t *ppu)
   ppu->CyclesSinceReset++;
 
   // Do PPU things
-  // Address increment things
-  // TODO: Shouldn't this be moved down?
-  if (IsRendering(ppu) && ppu->VCount >= -1 && ppu->VCount <= 239)
-  {
-    if (ppu->HCount == 256)
-    {
-      IncrementY(ppu);
-    }
-    if (ppu->HCount == 257)
-    {
-      // Copy horizontal position from T to V
-      ppu->V = (ppu->T & 0x041F) | (ppu->V & ~0x041F);
-    }
-    if (ppu->VCount == -1 && ppu->HCount >= 280 && ppu->HCount <= 304)
-    {
-      // Copy vertical bits from T to V
-      ppu->V = (ppu->T & ~0x041F) | (ppu->V & 0x041F);
-    }
-    if (ppu->HCount != 0 && (ppu->HCount <= 256 || ppu->HCount >= 328))
-    {
-      // Increment horizontal of V every 8 dots (except at dot 0)
-      if (ppu->HCount % 8 == 0)
-      {
-        IncrementCoarseX(ppu);
-      }
-    }
-  }
 
   // Pre-render scanline
   if (ppu->VCount == -1)
@@ -482,6 +461,7 @@ void PPU_Tick(PPU_t *ppu)
       }
     }
   }
+
   // Post render scanline + 1
   if (ppu->VCount == 241)
   {
@@ -500,7 +480,7 @@ void PPU_Tick(PPU_t *ppu)
   uint8_t bgPalette = 0;
   uint8_t spPixel = 0;
   uint8_t spPalette = 0;
-  uint8_t bgPriority = 0;
+  bool bgPriority;
 
   if (CR8_IsBitSet(ppu->Mask, MASKFLAG_BACKGROUND))
   {
@@ -535,7 +515,7 @@ void PPU_Tick(PPU_t *ppu)
           spPixel = pixel;
           spPalette = palette;
           // TODO: Attributes
-          bgPriority = ppu->ActiveSpriteData[i].Attributes & ATTRFLAG_PRIORITY;
+          bgPriority = (ppu->ActiveSpriteData[i].Attributes & ATTRFLAG_PRIORITY) > 0;
           isSpriteZero = i == 0;
           break;
         }
@@ -550,7 +530,7 @@ void PPU_Tick(PPU_t *ppu)
     bgPixel = spPixel;
     bgPalette = spPalette;
   }
-  else if (bgPixel != 0 && spPixel != 0 && bgPriority == 0)
+  else if (bgPixel != 0 && spPixel != 0)
   {
     if (isSpriteZero && CR8_IsBitSet(ppu->Mask, MASKFLAG_BACKGROUND))
     {
@@ -561,8 +541,40 @@ void PPU_Tick(PPU_t *ppu)
         CR8_SetBits(&ppu->Status, STATFLAG_SPRITE_0_HIT);
       }
     }
-    bgPixel = spPixel;
-    bgPalette = spPalette;
+
+    if (!bgPriority)
+    {
+      bgPixel = spPixel;
+      bgPalette = spPalette;
+    }
+  }
+
+  // Address increment things
+  // TODO: Shouldn't this be moved down?
+  if (IsRendering(ppu) && ppu->VCount >= -1 && ppu->VCount <= 239)
+  {
+    if (ppu->HCount == 256)
+    {
+      IncrementY(ppu);
+    }
+    if (ppu->HCount == 257)
+    {
+      // Copy horizontal position from T to V
+      ppu->V = (ppu->T & 0x041F) | (ppu->V & ~0x041F);
+    }
+    if (ppu->VCount == -1 && ppu->HCount >= 280 && ppu->HCount <= 304)
+    {
+      // Copy vertical bits from T to V
+      ppu->V = (ppu->T & ~0x041F) | (ppu->V & 0x041F);
+    }
+    if (ppu->HCount != 0 && (ppu->HCount <= 256 || ppu->HCount >= 328))
+    {
+      // Increment horizontal of V every 8 dots (except at dot 0)
+      if (ppu->HCount % 8 == 0)
+      {
+        IncrementCoarseX(ppu);
+      }
+    }
   }
 
   // Render the pixel to the screen
