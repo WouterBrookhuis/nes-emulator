@@ -114,7 +114,7 @@ uint8_t APU_ReadFromCpu(APU_t *apu, uint16_t address)
     return value;
   }
   default:
-    LogError("Not implemented APU read address 0x%04X", address);
+    //LogError("Not implemented APU read address 0x%04X", address);
     return 0;
   }
 }
@@ -146,7 +146,7 @@ void APU_WriteFromCpu(APU_t *apu, uint16_t address, uint8_t data)
     break;
   }
   default:
-    LogError("Not implemented APU write address 0x%04X", address);
+    //LogError("Not implemented APU write address 0x%04X", address);
     break;
   }
 }

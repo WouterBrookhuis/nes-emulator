@@ -182,9 +182,10 @@ static void Initialize()
   //const char * romFile = "Resources/instr_timing/instr_timing.nes";
   //const char * romFile = "Resources/official_only.nes";
   //const char * romFile = "Resources/nestest.nes";
-  //const char * romFile = "Resources/donkey kong.nes";
-  const char * romFile = "Resources/super mario bros.nes";
-  //const char * romFile = "Resources/ppu_sprite_hit/ppu_sprite_hit.nes";
+  //const char * romFile = "Resources/games/donkey kong.nes";
+  //const char * romFile = "Resources/games/super mario bros.nes";
+  //const char * romFile = "Resources/games/super mario bros 3.nes";
+  const char * romFile = "Resources/ppu_sprite_hit/ppu_sprite_hit.nes";
   //const char *romFile = "Resources/apu_test/apu_test.nes";
   //const char * romFile = "Resources/power_up_palette.nes";
   //const char * romFile = "Resources/instr_test-v5/rom_singles/02-implied.nes";
