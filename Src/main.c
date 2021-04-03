@@ -80,7 +80,8 @@ static bool _frameStepKeyWasPressed;
 static bool _runKeyWasPressed;
 static bool _statusKeyWasPressed;
 static bool _run;
-static DetailMode_t _detailMode;;
+static bool _screenshotWasPressed;
+static DetailMode_t _detailMode;
 static char _lastLoadedFileName[512];
 static SDL_Surface *_ppuRenderSurface;
 static u8_t _patternTableDrawIndex = 2;
@@ -302,6 +303,10 @@ static void Event(SDL_Event* event)
     {
       _statusKeyWasPressed = true;
     }
+    else if (event->key.keysym.sym == SDLK_F12)
+    {
+      _screenshotWasPressed = true;
+    }
     else if (event->key.keysym.sym == SDLK_p)
     {
       _patternTableDrawIndex++;
@@ -356,6 +361,21 @@ static void FormatInstruction(CPU_t *cpu, char* textBuffer)
           cpu->CycleCount
           );
   //LogMessage(textBuffer);
+}
+
+static bool WriteSurfaceToFile(SDL_Surface *surface, const char *path)
+{
+  FILE* file = fopen(path, "wb");
+  if (NULL == file)
+  {
+    return false;
+  }
+
+  fwrite(surface->pixels, surface->format->BytesPerPixel, surface->h * surface->w, file);
+
+  fclose(file);
+
+  return true;
 }
 
 static bool Update(float deltaTime)
@@ -544,6 +564,21 @@ static bool Update(float deltaTime)
   if (_patternTableDrawIndex < 2)
   {
     DrawPatternTable(bus, _patternTableDrawIndex * 0x1000, _ppuPatternTableSurfaces[_patternTableDrawIndex]);
+  }
+
+  // Write screenshot to file after rendering
+  if (_screenshotWasPressed)
+  {
+    const char* fileName = "screenshot.raw";
+    if (WriteSurfaceToFile(_ppuRenderSurface, fileName))
+    {
+      LogMessage("Saved screenshot to %s", fileName);
+    }
+    else
+    {
+      LogError("Failed to save screenshot to %s", fileName);
+    }
+    _screenshotWasPressed = false;
   }
 
   return true;
