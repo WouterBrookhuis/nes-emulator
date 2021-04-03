@@ -8,8 +8,7 @@
 #ifndef SRC_NES_MAPPER_H_
 #define SRC_NES_MAPPER_H_
 
-#include <stdbool.h>
-#include <stddef.h>
+#include "Types.h"
 
 typedef enum _MirrorMode_t
 {
@@ -22,17 +21,17 @@ typedef enum _MirrorMode_t
 typedef struct _Bus_t Bus_t;
 typedef struct _Mapper_t Mapper_t;
 
-typedef bool (*Mapper_Read)(Mapper_t *mapper, uint16_t address, uint8_t *data);
-typedef bool (*Mapper_Write)(Mapper_t *mapper, uint16_t address, uint8_t data);
+typedef bool (*Mapper_Read)(Mapper_t *mapper, u16_t address, u8_t *data);
+typedef bool (*Mapper_Write)(Mapper_t *mapper, u16_t address, u8_t data);
 
 typedef struct _Mapper_t
 {
-  uint8_t MapperId;     // iNES mapper ID
+  u8_t MapperId;     // iNES mapper ID
   MirrorMode_t Mirror;  // Mirroring mode
   Bus_t *Bus;           // The bus we are connected to
-  uint8_t NumPrgBanks;
-  uint8_t NumChrBanks;
-  uint8_t *Memory;      // This mapper's backing memory, used internally
+  u8_t NumPrgBanks;
+  u8_t NumChrBanks;
+  u8_t *Memory;      // This mapper's backing memory, used internally
   size_t MemorySize;    // The size of the mapper's memory, used internally
   size_t ChrOffset;     // Offset of CHR rom/ram in Memory
   Mapper_Read ReadFromCpu;   // The mapper read function

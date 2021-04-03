@@ -7,12 +7,12 @@
 
 #ifndef SRC_NES_MAPPER000_H_
 #define SRC_NES_MAPPER000_H_
-#include <stdint.h>
+#include "Types.h"
 #include "INesLoader.h"
 
 typedef struct
 {
-  uint8_t *PrgRam8k;        // Pointer to 8k worth of program RAM
+  u8_t *PrgRam8k;        // Pointer to 8k worth of program RAM
 } Mapper000Data_t;
 
 void Mapper000_Initialize(Mapper_t *mapper, INesHeader_t *header);

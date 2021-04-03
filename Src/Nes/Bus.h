@@ -8,8 +8,7 @@
 #ifndef SRC_NES_BUS_H_
 #define SRC_NES_BUS_H_
 
-#include <stdint.h>
-#include <stdbool.h>
+#include "Types.h"
 
 typedef struct _PPU_t PPU_t;
 typedef struct _CPU_t CPU_t;
@@ -26,9 +25,9 @@ typedef enum
 typedef struct _DMA_t
 {
   DMA_State_t State;
-  uint16_t CPUBaseAddress;
-  uint8_t NumTransfersComplete;
-  uint8_t Data;
+  u16_t CPUBaseAddress;
+  u8_t NumTransfersComplete;
+  u8_t Data;
 } DMA_t;
 
 typedef struct _Bus_t
@@ -40,23 +39,23 @@ typedef struct _Bus_t
   DMA_t DMA;
 } Bus_t;
 
-void Bus_TriggerDMA(Bus_t *bus, uint8_t cpuPage);
+void Bus_TriggerDMA(Bus_t *bus, u8_t cpuPage);
 
-void Bus_NMI(Bus_t *bus, bool assert);
+void Bus_NMI(const Bus_t *bus, bool assert);
 
-void Bus_IRQ(Bus_t *bus, bool assert);
+void Bus_IRQ(const Bus_t *bus, bool assert);
 
 void Bus_Initialize(Bus_t *bus, CPU_t *cpu, PPU_t *ppu, APU_t *apu);
 
 void Bus_SetMapper(Bus_t *bus, Mapper_t *mapper);
 
-uint8_t Bus_ReadFromCPU(Bus_t *bus, uint16_t address);
+u8_t Bus_ReadFromCPU(const Bus_t *bus, u16_t address);
 
-void Bus_WriteFromCPU(Bus_t *bus, uint16_t address, uint8_t data);
+void Bus_WriteFromCPU(Bus_t *bus, u16_t address, u8_t data);
 
-uint8_t Bus_ReadFromPPU(Bus_t *bus, uint16_t address);
+u8_t Bus_ReadFromPPU(const Bus_t *bus, u16_t address);
 
-void Bus_WriteFromPPU(Bus_t *bus, uint16_t address, uint8_t data);
+void Bus_WriteFromPPU(const Bus_t *bus, u16_t address, u8_t data);
 
 
 #endif /* SRC_NES_BUS_H_ */

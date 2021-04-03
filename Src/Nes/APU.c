@@ -98,9 +98,9 @@ void APU_Tick(APU_t *apu)
   CR8_Clock(&apu->Status);
 }
 
-uint8_t APU_ReadFromCpu(APU_t *apu, uint16_t address)
+u8_t APU_ReadFromCpu(APU_t *apu, u16_t address)
 {
-  uint8_t addressByte = (uint8_t) address;
+  u8_t addressByte = (u8_t) address;
 
   switch (addressByte)
   {
@@ -108,7 +108,7 @@ uint8_t APU_ReadFromCpu(APU_t *apu, uint16_t address)
   {
     // STATUS: Reading clears the frame interrupt flag
     // TODO: DNT21 behavior
-    uint8_t value = CR8_Read(apu->Status) & (APU_STATUS_FLAG_DMC_INT | APU_STATUS_FLAG_FRAME_INT);
+    u8_t value = CR8_Read(apu->Status) & (APU_STATUS_FLAG_DMC_INT | APU_STATUS_FLAG_FRAME_INT);
     // TODO: If flag was set at the same moment as the read then it should not be cleared
     CR8_ClearBits(&apu->Status, APU_STATUS_FLAG_FRAME_INT);
     return value;
@@ -119,9 +119,9 @@ uint8_t APU_ReadFromCpu(APU_t *apu, uint16_t address)
   }
 }
 
-void APU_WriteFromCpu(APU_t *apu, uint16_t address, uint8_t data)
+void APU_WriteFromCpu(APU_t *apu, u16_t address, u8_t data)
 {
-  uint8_t addressByte = (uint8_t) address;
+  u8_t addressByte = (u8_t) address;
 
   switch (addressByte)
   {

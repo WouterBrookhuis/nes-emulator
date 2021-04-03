@@ -80,7 +80,7 @@ static bool _run;
 static DetailMode_t _detailMode;;
 static char _lastLoadedFileName[512];
 static SDL_Surface *_ppuRenderSurface;
-static uint8_t _patternTableDrawIndex = 2;
+static u8_t _patternTableDrawIndex = 2;
 static SDL_Surface *_ppuPatternTableSurfaces[2];
 
 static bool _controller1Buttons[NR_OF_NES_BUTTONS];
@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
   return sdlReturnCode;
 }
 
-static bool HandleButton(uint8_t controller, NESButton_t button)
+static bool HandleButton(u8_t controller, NESButton_t button)
 {
   return _controller1Buttons[button];
 }
@@ -103,10 +103,10 @@ static bool HandleButton(uint8_t controller, NESButton_t button)
 static void DrawPalettes(Bus_t *bus, SDL_Surface *surface, int startX, int startY)
 {
   // Draw all palette entries
-  uint8_t r;
-  uint8_t g;
-  uint8_t b;
-  uint16_t address = 0x3F00;
+  u8_t r;
+  u8_t g;
+  u8_t b;
+  u16_t address = 0x3F00;
   SDL_Rect rect;
   SDL_Rect bgRect;
 
@@ -124,7 +124,7 @@ static void DrawPalettes(Bus_t *bus, SDL_Surface *surface, int startX, int start
     SDL_FillRect(surface, &bgRect, SDL_MapRGB(surface->format, 255, 255, 255));
     for (int c = 0; c < 4; c++)
     {
-      uint8_t paletteValue = Bus_ReadFromPPU(bus, address + c);
+      u8_t paletteValue = Bus_ReadFromPPU(bus, address + c);
       Palette_GetRGB(paletteValue, &r, &g, &b);
       SDL_FillRect(surface, &rect, SDL_MapRGB(surface->format, r, g, b));
       rect.x += rect.w;
@@ -134,10 +134,10 @@ static void DrawPalettes(Bus_t *bus, SDL_Surface *surface, int startX, int start
   }
 }
 
-static void DrawPatternTable(Bus_t *bus, uint16_t tableStart, SDL_Surface *surface)
+static void DrawPatternTable(Bus_t *bus, u16_t tableStart, SDL_Surface *surface)
 {
-  uint8_t tileDataLow;
-  uint8_t tileDataHigh;
+  u8_t tileDataLow;
+  u8_t tileDataHigh;
 
   // Hack, hack, hack away
   PPU_SetRenderSurface(surface);
@@ -163,7 +163,7 @@ static void DrawPatternTable(Bus_t *bus, uint16_t tableStart, SDL_Surface *surfa
                                        + 8);
         for (int px = 0; px < 8; px++)
         {
-          uint8_t pixel = ((tileDataLow & (0x80 >> px)) > 0)
+          u8_t pixel = ((tileDataLow & (0x80 >> px)) > 0)
                           | (((tileDataHigh & (0x80 >> px)) > 0) << 1);
           PPU_RenderPixel(bus->PPU, 8 * tx + px, 8 * ty + py, pixel, 0x00);
         }
@@ -312,13 +312,13 @@ static void Event(SDL_Event* event)
 
 static void FormatInstruction(CPU_t *cpu, char* textBuffer)
 {
-  uint8_t instructionBytes[3];
+  u8_t instructionBytes[3];
   const InstructionTableEntry_t *instr;
   instructionBytes[0] = Bus_ReadFromCPU(cpu->Bus, cpu->PC);
   instr = InstructionTable_GetInstruction(instructionBytes[0]);
-  uint8_t instructionLength = AddressingMode_GetInstructionLength(instr->AddressingMode);
+  u8_t instructionLength = AddressingMode_GetInstructionLength(instr->AddressingMode);
 
-  for (uint8_t i = 1; i < instructionLength; i++)
+  for (u8_t i = 1; i < instructionLength; i++)
   {
     instructionBytes[i] = Bus_ReadFromCPU(cpu->Bus, cpu->PC + i);
   }
@@ -410,11 +410,12 @@ static bool Update(float deltaTime)
     // Second row: PPU status
     snprintf(&_statusBarBuffer[STATUS_BAR_CHARS_PER_ROW],
             STATUS_BAR_CHARS_PER_ROW + 1,
-            "H:%03d V:%03d CTRL:%02X STAT:%02X FRAME:%d",
+            "H:%03d V:%03d CTRL:%02X STAT:%02X MASK:%02X FRAME:%d",
             ppu->HCount,
             ppu->VCount,
             ppu->Ctrl.currentValue,
             ppu->Status.currentValue,
+            ppu->Mask.currentValue,
             ppu->FrameCount
             );
     break;
@@ -431,13 +432,16 @@ static bool Update(float deltaTime)
             );
     break;
   }
+  case NR_OF_DETAIL_MODES:
+  default:
+    break;
   }
 
 
-  uint16_t memAddress = cpu->InstructionPC - HALF_MEM_WINDOW_SIZE;
+  u16_t memAddress = cpu->InstructionPC - HALF_MEM_WINDOW_SIZE;
   for (int i = 0; i < HALF_MEM_WINDOW_SIZE * 2 + 1; i++)
   {
-    uint8_t memData = Bus_ReadFromCPU(bus, memAddress);
+    u8_t memData = Bus_ReadFromCPU(bus, memAddress);
     if (i == HALF_MEM_WINDOW_SIZE)
     {
       sprintf(_memTextBuffer[i],
@@ -469,7 +473,7 @@ static bool Update(float deltaTime)
              );
     for (int j = 0; j < MEMORY_VIEW_COLUMNS; j++)
     {
-      uint8_t memData = Bus_ReadFromCPU(bus, memAddress);
+      u8_t memData = Bus_ReadFromCPU(bus, memAddress);
       snprintf(_memoryViewBuffer + strlen(_memoryViewBuffer),
                sizeof(_memoryViewBuffer) - strlen(_memoryViewBuffer),
                " %02X",
@@ -636,7 +640,7 @@ static void Draw(SDL_Surface* surface)
   }
 
   uint64_t perfCounter = SDL_GetPerformanceCounter();
-  uint32_t fps = performanceCounterFrequency / (perfCounter - prevPerformanceCounter);
+  u32_t fps = performanceCounterFrequency / (perfCounter - prevPerformanceCounter);
   snprintf(_statusBarBuffer, sizeof(_statusBarBuffer), "FPS: %u", fps);
   Text_DrawString(surface, _statusBarBuffer, 0, surface->h - 2 * _font.GlyphHeight, &_font);
   prevPerformanceCounter = perfCounter;

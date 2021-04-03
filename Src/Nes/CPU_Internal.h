@@ -9,8 +9,7 @@
 #define SRC_NES_CPU_INTERNAL_H_
 
 #include "CPU.h"
-#include <stdint.h>
-#include <stdbool.h>
+#include "Types.h"
 #include "Bus.h"
 
 #define PFLAG_CARRY       0x01
@@ -27,12 +26,12 @@
 #define IRQ_VECTOR_LOCATION        0xFFFE
 #define STACK_OFFSET      0x0100
 
-static inline bool IsFlagSet(const uint8_t *P, uint8_t flag)
+static inline bool IsFlagSet(const u8_t *P, u8_t flag)
 {
   return ((*P) & flag) > 0;
 }
 
-static inline void SetFlag(uint8_t *P, uint8_t flag, bool set)
+static inline void SetFlag(u8_t *P, u8_t flag, bool set)
 {
   if (set)
   {
@@ -44,30 +43,30 @@ static inline void SetFlag(uint8_t *P, uint8_t flag, bool set)
   }
 }
 
-static inline uint16_t Read16(CPU_t *cpu, uint16_t address)
+static inline u16_t Read16(CPU_t *cpu, u16_t address)
 {
-  uint8_t lowByte;
+  u8_t lowByte;
   lowByte = Bus_ReadFromCPU(cpu->Bus, address);
   return (Bus_ReadFromCPU(cpu->Bus, address + 1) << 8) | lowByte;
 }
 
-static inline uint8_t Read(CPU_t *cpu, uint16_t address)
+static inline u8_t Read(CPU_t *cpu, u16_t address)
 {
   return Bus_ReadFromCPU(cpu->Bus, address);
 }
 
-static inline void Write(CPU_t *cpu, uint16_t address, uint8_t data)
+static inline void Write(CPU_t *cpu, u16_t address, u8_t data)
 {
   Bus_WriteFromCPU(cpu->Bus, address, data);
 }
 
-static inline void Push(CPU_t *cpu, uint8_t data)
+static inline void Push(CPU_t *cpu, u8_t data)
 {
   Write(cpu, cpu->S + STACK_OFFSET, data);
   cpu->S--;
 }
 
-static inline uint8_t Pop(CPU_t *cpu)
+static inline u8_t Pop(CPU_t *cpu)
 {
   cpu->S++;
   return Read(cpu, cpu->S + STACK_OFFSET);

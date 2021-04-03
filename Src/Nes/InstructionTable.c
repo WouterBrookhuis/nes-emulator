@@ -303,12 +303,12 @@ const static InstructionTableEntry_t TABLE[] =
 
 const size_t TABLE_SIZE = (sizeof(TABLE) / sizeof(TABLE[0]));
 
-uint8_t InstructionTable_GetInstructionCount(void)
+u8_t InstructionTable_GetInstructionCount(void)
 {
-  return (uint8_t)TABLE_SIZE;
+  return (u8_t)TABLE_SIZE;
 }
 
-const InstructionTableEntry_t* InstructionTable_GetInstruction(uint8_t instruction)
+const InstructionTableEntry_t* InstructionTable_GetInstruction(u8_t instruction)
 {
   return &TABLE[instruction];
 }

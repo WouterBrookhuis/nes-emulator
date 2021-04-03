@@ -39,7 +39,7 @@ const char* AddressingMode_GetName(AddressingMode_t mode)
   return "UNK";
 }
 
-uint8_t AddressingMode_GetInstructionLength(AddressingMode_t mode)
+u8_t AddressingMode_GetInstructionLength(AddressingMode_t mode)
 {
   switch(mode)
   {

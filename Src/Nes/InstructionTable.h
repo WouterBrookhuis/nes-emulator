@@ -8,7 +8,7 @@
 #ifndef SRC_NES_INSTRUCTIONTABLE_H_
 #define SRC_NES_INSTRUCTIONTABLE_H_
 
-#include <stdint.h>
+#include "Types.h"
 #include "AddressingMode.h"
 
 typedef struct _CPU_t CPU_t;
@@ -24,8 +24,8 @@ typedef struct _InstructionTableEntry_t
   const char* Name;
 } InstructionTableEntry_t;
 
-uint8_t InstructionTable_GetInstructionCount(void);
+u8_t InstructionTable_GetInstructionCount(void);
 
-const InstructionTableEntry_t* InstructionTable_GetInstruction(uint8_t instruction);
+const InstructionTableEntry_t* InstructionTable_GetInstruction(u8_t instruction);
 
 #endif /* SRC_NES_INSTRUCTIONTABLE_H_ */

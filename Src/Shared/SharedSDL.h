@@ -28,12 +28,12 @@ int SharedSDL_Start();
 
 SDL_Surface* SharedSDL_LoadImage(const char* filepath);
 
-void SharedSDL_BeginTiming(uint32_t index);
+void SharedSDL_BeginTiming(unsigned int index);
 
-void SharedSDL_EndTiming(uint32_t index);
+void SharedSDL_EndTiming(unsigned int index);
 
-void SharedSDL_ResetTiming(uint32_t index);
+void SharedSDL_ResetTiming(unsigned int index);
 
-void SharedSDL_PrintTiming(uint32_t index, const char *name);
+void SharedSDL_PrintTiming(unsigned int index, const char *name);
 
 #endif /* SRC_SHARED_SHAREDSDL_H_ */

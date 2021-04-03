@@ -8,8 +8,7 @@
 #ifndef SRC_NES_CPU_H_
 #define SRC_NES_CPU_H_
 
-#include <stdint.h>
-#include <stdbool.h>
+#include "Types.h"
 
 #include "AddressingMode.h"
 #include "ClockedRegister.h"
@@ -25,16 +24,16 @@ typedef struct _CPU_t
   Bus_t *Bus;                       // Pointer to Bus structure the CPU is connected to
   bool IsKilled;                    // Flag to check if processor is killed by invalid instruction
   AddressingMode_t AddressingMode;  // Addressing mode of current instruction
-  uint16_t Address;                 // Current address for the bus
-  uint8_t Instruction;              // Current instruction byte
-  uint16_t InstructionPC;           // The PC value where this instruction came from
+  u16_t Address;                 // Current address for the bus
+  u8_t Instruction;              // Current instruction byte
+  u16_t InstructionPC;           // The PC value where this instruction came from
 
-  uint8_t A;      // Accumulator register
-  uint8_t X;      // X addressing register
-  uint8_t Y;      // Y addressing register
-  uint16_t PC;    // Program counter
-  uint8_t S;      // Stack pointer
-  uint8_t P;      // Status register
+  u8_t A;      // Accumulator register
+  u8_t X;      // X addressing register
+  u8_t Y;      // Y addressing register
+  u16_t PC;    // Program counter
+  u8_t S;      // Stack pointer
+  u8_t P;      // Status register
 
   bool IsRisingClockEdge;
   bool NMILineAssertedPrevious;

@@ -11,7 +11,7 @@
 #include <stdio.h>
 
 #define PALETTE_ENTRIES   0x40
-uint8_t _palette[PALETTE_ENTRIES * 3];
+u8_t _palette[PALETTE_ENTRIES * 3];
 
 void Palette_LoadFrom(const char* file)
 {
@@ -35,7 +35,7 @@ void Palette_LoadFrom(const char* file)
   LogMessage("Loaded palette from %s", file);
 }
 
-void Palette_GetRGB(uint8_t index, uint8_t *r, uint8_t *g, uint8_t *b)
+void Palette_GetRGB(u8_t index, u8_t *r, u8_t *g, u8_t *b)
 {
   index &= 0x3F;
 

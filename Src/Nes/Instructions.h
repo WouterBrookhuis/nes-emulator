@@ -8,6 +8,7 @@
 #ifndef SRC_NES_INSTRUCTIONS_H_
 #define SRC_NES_INSTRUCTIONS_H_
 
+#include "Types.h"
 #include "CPU.h"
 
 typedef int (*InstructionAction_t)(CPU_t *cpu);

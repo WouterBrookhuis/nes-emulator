@@ -16,14 +16,14 @@
 #include <string.h>
 
 // TODO: RAM?
-uint8_t _testRam[0x800];
-uint8_t _palette[256];
-uint8_t _vram[2048];
-uint8_t _pattern[8192];
+u8_t _testRam[0x800];
+u8_t _palette[256];
+u8_t _vram[2048];
+u8_t _pattern[8192];
 
-static uint8_t ReadNametableDefault(Bus_t *bus, uint16_t address);
+static u8_t ReadNametableDefault(const Bus_t *bus, u16_t address);
 
-static void WriteNametableDefault(Bus_t *bus, uint16_t address, uint8_t data);
+static void WriteNametableDefault(const Bus_t *bus, u16_t address, u8_t data);
 
 void Bus_Initialize(Bus_t *bus, CPU_t *cpu, PPU_t *ppu, APU_t *apu)
 {
@@ -46,26 +46,26 @@ void Bus_SetMapper(Bus_t *bus, Mapper_t *mapper)
   mapper->Bus = bus;
 }
 
-void Bus_TriggerDMA(Bus_t *bus, uint8_t cpuPage)
+void Bus_TriggerDMA(Bus_t *bus, u8_t cpuPage)
 {
   bus->DMA.CPUBaseAddress = cpuPage << 8;
   bus->DMA.NumTransfersComplete = 0;
   bus->DMA.State = DMA_STATE_WAITING;
 }
 
-void Bus_NMI(Bus_t *bus, bool assert)
+void Bus_NMI(const Bus_t *bus, bool assert)
 {
   CPU_NMI(bus->CPU, assert);
 }
 
-void Bus_IRQ(Bus_t *bus, bool assert)
+void Bus_IRQ(const Bus_t *bus, bool assert)
 {
   CPU_IRQ(bus->CPU, assert);
 }
 
-uint8_t Bus_ReadFromCPU(Bus_t *bus, uint16_t address)
+u8_t Bus_ReadFromCPU(const Bus_t *bus, u16_t address)
 {
-  uint8_t data;
+  u8_t data;
 
   if (bus->Mapper != NULL && bus->Mapper->ReadFromCpu(bus->Mapper, address, &data))
   {
@@ -109,7 +109,7 @@ uint8_t Bus_ReadFromCPU(Bus_t *bus, uint16_t address)
   return data;
 }
 
-void Bus_WriteFromCPU(Bus_t *bus, uint16_t address, uint8_t data)
+void Bus_WriteFromCPU(Bus_t *bus, u16_t address, u8_t data)
 {
   if (bus->Mapper != NULL && bus->Mapper->WriteFromCpu(bus->Mapper, address, data))
   {
@@ -156,9 +156,9 @@ void Bus_WriteFromCPU(Bus_t *bus, uint16_t address, uint8_t data)
   }
 }
 
-uint8_t Bus_ReadFromPPU(Bus_t *bus, uint16_t address)
+u8_t Bus_ReadFromPPU(const Bus_t *bus, u16_t address)
 {
-  uint8_t data;
+  u8_t data;
   address &= 0x3FFF;
 
   if (bus->Mapper != NULL && bus->Mapper->ReadFromPpu(bus->Mapper, address, &data))
@@ -177,7 +177,7 @@ uint8_t Bus_ReadFromPPU(Bus_t *bus, uint16_t address)
   }
   else if (address >= 0x3F00 && address <= 0x3FFF)
   {
-    uint16_t localAddress = address & 0x001F;
+    u16_t localAddress = address & 0x001F;
     if (localAddress == 0x10
         || localAddress == 0x14
         || localAddress == 0x18
@@ -195,7 +195,7 @@ uint8_t Bus_ReadFromPPU(Bus_t *bus, uint16_t address)
   return data;
 }
 
-void Bus_WriteFromPPU(Bus_t *bus, uint16_t address, uint8_t data)
+void Bus_WriteFromPPU(const Bus_t *bus, u16_t address, u8_t data)
 {
   address &= 0x3FFF;
 
@@ -215,7 +215,7 @@ void Bus_WriteFromPPU(Bus_t *bus, uint16_t address, uint8_t data)
   }
   else if (address >= 0x3F00 && address <= 0x3FFF)
   {
-    uint16_t localAddress = address & 0x001F;
+    u16_t localAddress = address & 0x001F;
     if (localAddress == 0x10
         || localAddress == 0x14
         || localAddress == 0x18
@@ -231,7 +231,7 @@ void Bus_WriteFromPPU(Bus_t *bus, uint16_t address, uint8_t data)
   }
 }
 
-static uint8_t ReadNametableDefault(Bus_t *bus, uint16_t address)
+static u8_t ReadNametableDefault(const Bus_t *bus, u16_t address)
 {
   address &= 0x0FFF;
 
@@ -278,7 +278,7 @@ static uint8_t ReadNametableDefault(Bus_t *bus, uint16_t address)
   return 0x55;
 }
 
-static void WriteNametableDefault(Bus_t *bus, uint16_t address, uint8_t data)
+static void WriteNametableDefault(const Bus_t *bus, u16_t address, u8_t data)
 {
   address &= 0x0FFF;
 

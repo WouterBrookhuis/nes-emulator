@@ -22,8 +22,8 @@ static APU_t _apu;
 static bool _ppuLastFrameEven;
 static bool _isEvenCpuCycle;
 
-static uint8_t _ppuTicker;
-static uint8_t _cpuTicker;
+static u8_t _ppuTicker;
+static u8_t _cpuTicker;
 
 void NES_Initialize(void)
 {

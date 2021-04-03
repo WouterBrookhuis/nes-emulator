@@ -55,7 +55,7 @@ bool INesLoader_Load(const char* file, Mapper_t* mapper)
     }
   }
 
-  uint8_t mapperId = ((header.Flags6 & INES_FLAGS6_MAPPER_MASK) >> INES_FLAGS6_MAPPER_SHIFT) | (header.Flags7 & INES_FLAGS7_MAPPER_MASK);
+  u8_t mapperId = ((header.Flags6 & INES_FLAGS6_MAPPER_MASK) >> INES_FLAGS6_MAPPER_SHIFT) | (header.Flags7 & INES_FLAGS7_MAPPER_MASK);
 
   switch (mapperId)
   {

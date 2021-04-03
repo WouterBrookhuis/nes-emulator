@@ -8,7 +8,7 @@
 #ifndef SRC_NES_ADDRESSINGMODE_H_
 #define SRC_NES_ADDRESSINGMODE_H_
 
-#include <stdint.h>
+#include "Types.h"
 
 typedef enum _AddressingMode_t
 {
@@ -28,6 +28,6 @@ typedef enum _AddressingMode_t
 
 const char* AddressingMode_GetName(AddressingMode_t mode);
 
-uint8_t AddressingMode_GetInstructionLength(AddressingMode_t mode);
+u8_t AddressingMode_GetInstructionLength(AddressingMode_t mode);
 
 #endif /* SRC_NES_ADDRESSINGMODE_H_ */

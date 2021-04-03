@@ -16,7 +16,7 @@
 static Controller_t _controllers[MAX_NUM_CONTROLLERS];
 static int _numControllers;
 
-void Controllers_Initialize(uint8_t numberOfControllers)
+void Controllers_Initialize(u8_t numberOfControllers)
 {
   if (numberOfControllers > MAX_NUM_CONTROLLERS)
   {
@@ -32,7 +32,7 @@ void Controllers_Initialize(uint8_t numberOfControllers)
   _numControllers = numberOfControllers;
 }
 
-void Controllers_Write(uint8_t controllerIndex, uint8_t data)
+void Controllers_Write(u8_t controllerIndex, u8_t data)
 {
   controllerIndex &= MAX_NUM_CONTROLLERS;
 
@@ -62,9 +62,9 @@ void Controllers_Write(uint8_t controllerIndex, uint8_t data)
   }
 }
 
-uint8_t Controllers_ReadAndShiftState(uint8_t controllerIndex)
+u8_t Controllers_ReadAndShiftState(u8_t controllerIndex)
 {
-  uint8_t result;
+  u8_t result;
 
   controllerIndex &= MAX_NUM_CONTROLLERS;
 
@@ -77,7 +77,7 @@ uint8_t Controllers_ReadAndShiftState(uint8_t controllerIndex)
   return result;
 }
 
-void Controllers_SetButtonHandler(uint8_t controllerIndex, IsButtonPressed_t handler)
+void Controllers_SetButtonHandler(u8_t controllerIndex, IsButtonPressed_t handler)
 {
   if (controllerIndex >= _numControllers)
   {

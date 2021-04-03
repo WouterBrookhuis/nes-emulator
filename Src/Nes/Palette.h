@@ -8,9 +8,9 @@
 #ifndef SRC_NES_PALETTE_H_
 #define SRC_NES_PALETTE_H_
 
-#include <stdint.h>
+#include "Types.h"
 
 void Palette_LoadFrom(const char* file);
-void Palette_GetRGB(uint8_t index, uint8_t *r, uint8_t *g, uint8_t *b);
+void Palette_GetRGB(u8_t index, u8_t *r, u8_t *g, u8_t *b);
 
 #endif /* SRC_NES_PALETTE_H_ */

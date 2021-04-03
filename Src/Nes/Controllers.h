@@ -8,8 +8,7 @@
 #ifndef SRC_NES_CONTROLLERS_H_
 #define SRC_NES_CONTROLLERS_H_
 
-#include <stdint.h>
-#include <stdbool.h>
+#include "Types.h"
 
 typedef enum _NESButton_t
 {
@@ -24,7 +23,7 @@ typedef enum _NESButton_t
   NR_OF_NES_BUTTONS,
 } NESButton_t;
 
-typedef bool (*IsButtonPressed_t)(uint8_t controller, NESButton_t button);
+typedef bool (*IsButtonPressed_t)(u8_t controller, NESButton_t button);
 
 typedef struct _Controller_t
 {
@@ -39,15 +38,15 @@ typedef struct _Controller_t
   // Down
   // Left
   // Right
-  uint8_t Data;
+  u8_t Data;
 } Controller_t;
 
-void Controllers_Initialize(uint8_t numberOfControllers);
+void Controllers_Initialize(u8_t numberOfControllers);
 
-void Controllers_SetButtonHandler(uint8_t controllerIndex, IsButtonPressed_t handler);
+void Controllers_SetButtonHandler(u8_t controllerIndex, IsButtonPressed_t handler);
 
-void Controllers_Write(uint8_t controllerIndex, uint8_t data);
+void Controllers_Write(u8_t controllerIndex, u8_t data);
 
-uint8_t Controllers_ReadAndShiftState(uint8_t controllerIndex);
+u8_t Controllers_ReadAndShiftState(u8_t controllerIndex);
 
 #endif /* SRC_NES_CONTROLLERS_H_ */

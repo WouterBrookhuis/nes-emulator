@@ -8,9 +8,8 @@
 #ifndef SRC_NES_PPU_H_
 #define SRC_NES_PPU_H_
 
-#include <stdint.h>
-#include <stdbool.h>
 #include <SDL2/SDL.h>
+#include "Types.h"
 #include "ClockedRegister.h"
 
 #define PPU_NUM_SCANLINES         (262)
@@ -21,19 +20,19 @@ typedef struct _Bus_t Bus_t;
 #pragma pack(push, 1)
 typedef struct _OAMEntry_t
 {
-  uint8_t Y;                // Y coordinate of top of sprite
-  uint8_t TileIndex;        // Tile index
-  uint8_t Attributes;       // Attributes for the sprite
-  uint8_t X;                // X coordinate of left of sprite
+  u8_t Y;                // Y coordinate of top of sprite
+  u8_t TileIndex;        // Tile index
+  u8_t Attributes;       // Attributes for the sprite
+  u8_t X;                // X coordinate of left of sprite
 } OAMEntry_t;
 #pragma pack(pop)
 
 typedef struct
 {
-  uint8_t X;
-  uint8_t SRPatternHigh;
-  uint8_t SRPatternLow;
-  uint8_t Attributes;
+  u8_t X;
+  u8_t SRPatternHigh;
+  u8_t SRPatternLow;
+  u8_t Attributes;
 } SpriteData_t;
 
 typedef enum
@@ -62,14 +61,14 @@ typedef struct _PPU_t
   cr8_t Data;               // Data register used for read/write via PPU bus from CPU
 
   // Wonky things
-  uint8_t AddressLatch;     // Address latch for '16 bit' registers like Address and Scroll
-  uint8_t DataBuffer;       // Buffer for Data register reads (they are delayed)
-  uint8_t LatchedData;      // Represents data lines still having the previous values when
+  u8_t AddressLatch;     // Address latch for '16 bit' registers like Address and Scroll
+  u8_t DataBuffer;       // Buffer for Data register reads (they are delayed)
+  u8_t LatchedData;      // Represents data lines still having the previous values when
                             // reading from non readable registers (it returns this instead)
 
   // Frame lines
-  uint_fast16_t VCount;     // Scanline
-  uint_fast16_t HCount;     // Dot (or pixel) horizontally on the scanline, starts at 0
+  u16f_t VCount;     // Scanline
+  u16f_t HCount;     // Dot (or pixel) horizontally on the scanline, starts at 0
   bool IsEvenFrame;         // Toggle indicating if we are on an odd or even frame
 
   // VRAM Address Registers
@@ -80,32 +79,32 @@ typedef struct _PPU_t
   // N = Nametable
   // Y = Coarse Y scroll
   // X = Coarse X scroll
-  uint16_t V;       // The VRAM address that is actually used
-  uint16_t T;       // A temporary VRAM address, most CPU actions modify this one
-  uint8_t X;        // Fine X offset, 3 bits, 1 MSB = 1 pixel
+  u16f_t V;       // The VRAM address that is actually used
+  u16f_t T;       // A temporary VRAM address, most CPU actions modify this one
+  u8f_t X;        // Fine X offset, 3 bits, 1 MSB = 1 pixel
 
   // Rendering shift registers
-  uint16_t SRPatternHigh;   // High bit of pattern
-  uint16_t SRPatternLow;    // Low bit of pattern
-  uint16_t SRAttributeHigh; // High bit of attribute
-  uint16_t SRAttributeLow;  // Low bit of attribute
+  u16_t SRPatternHigh;   // High bit of pattern
+  u16_t SRPatternLow;    // Low bit of pattern
+  u16_t SRAttributeHigh; // High bit of attribute
+  u16_t SRAttributeLow;  // Low bit of attribute
 
-  uint8_t NextBgTileId;
-  uint8_t NextBgAttribute;
-  uint8_t NextBgTileLow;
-  uint8_t NextBgTileHigh;
+  u8f_t NextBgTileId;
+  u8f_t NextBgAttribute;
+  u8f_t NextBgTileLow;
+  u8f_t NextBgTileHigh;
 
   // OAM
   OAMEntry_t OAM[64];       // Object Attribute Memory for storing sprite data
-  uint8_t *OAMAsPtr;        // Pointer to OAM for indexing actions
+  u8_t *OAMAsPtr;        // Pointer to OAM for indexing actions
 
   OAMEntry_t ActiveSpriteOAM[8];      // OAM for sprites on current scanline
-  uint8_t *ActiveSpriteOAMAsPtr;      // Pointer to ActiveSpriteOAM
+  u8_t *ActiveSpriteOAMAsPtr;      // Pointer to ActiveSpriteOAM
   SpriteData_t ActiveSpriteData[8];   // Other data for sprites on current scanline
-  uint8_t SpriteEval_NumberOfSprites;
-  uint8_t SpriteEval_OAMSpriteIndex;
-  uint8_t SpriteEval_SpriteByteIndex;
-  uint8_t SpriteEval_TempSpriteData;
+  u8_t SpriteEval_NumberOfSprites;
+  u8_t SpriteEval_OAMSpriteIndex;
+  u8_t SpriteEval_SpriteByteIndex;
+  u8_t SpriteEval_TempSpriteData;
   SpriteEvalState_t SpriteEval_State;
 } PPU_t;
 
@@ -113,8 +112,8 @@ void PPU_Initialize(PPU_t *ppu);
 void PPU_Tick(PPU_t *ppu);
 void PPU_ClockRegisters(PPU_t *ppu);
 void PPU_Reset(PPU_t *ppu);
-uint8_t PPU_ReadFromCpu(PPU_t *ppu, uint16_t address);
-void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data);
+u8_t PPU_ReadFromCpu(PPU_t *ppu, u16_t address);
+void PPU_WriteFromCpu(PPU_t *ppu, u16_t address, u8_t data);
 void PPU_SetRenderSurface(SDL_Surface *surface);
-void PPU_RenderPixel(PPU_t *ppu, int x, int y, uint8_t pixel, uint8_t palette);
+void PPU_RenderPixel(const PPU_t *ppu, u16f_t x, u16f_t y, u8_t pixel, u8_t palette);
 #endif /* SRC_NES_PPU_H_ */

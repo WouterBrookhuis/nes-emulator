@@ -12,8 +12,8 @@
 // Add With Carry
 int ADC(CPU_t *cpu)
 {
-  uint8_t mem;
-  uint16_t tempResult;
+  u8_t mem;
+  u16_t tempResult;
   mem = Read(cpu, cpu->Address);
   tempResult = cpu->A + mem;
   if (IsFlagSet(&cpu->P, PFLAG_CARRY))
@@ -28,7 +28,7 @@ int ADC(CPU_t *cpu)
   SetFlag(&cpu->P, PFLAG_OVERFLOW, ((cpu->A & 0x80) ^ (tempResult & 0x80)) & ~((cpu->A & 0x80) ^ (mem & 0x80)));
 
   // Store result
-  cpu->A = (uint8_t)tempResult;
+  cpu->A = (u8_t)tempResult;
 
   return 1;
 }
@@ -44,7 +44,7 @@ int AHX(CPU_t *cpu)
 // Illegal: And with immediate and shift right
 int ALR(CPU_t *cpu)
 {
-  uint16_t temp = cpu->A & Read(cpu, cpu->Address);
+  u16_t temp = cpu->A & Read(cpu, cpu->Address);
   // Carry flag is the bit that will be shifted out
   SetFlag(&cpu->P, PFLAG_CARRY, temp & 1);
   temp >>= 1;
@@ -88,14 +88,14 @@ int ARR(CPU_t *cpu)
 // Illegal: (A AND X) - IMM
 int AXS(CPU_t *cpu)
 {
-  uint8_t mem = Read(cpu, cpu->Address);
+  u8_t mem = Read(cpu, cpu->Address);
   cpu->X = cpu->A & cpu->X;
 
-  uint16_t temp = cpu->X + ~mem + 1;
+  u16_t temp = cpu->X + ~mem + 1;
   SetFlag(&cpu->P, PFLAG_CARRY, cpu->X >= mem);
   SetFlag(&cpu->P, PFLAG_NEGATIVE, temp & 0x80);
   SetFlag(&cpu->P, PFLAG_ZERO, (temp & 0xFF) == 0x00);
-  cpu->X = (uint8_t) temp;
+  cpu->X = (u8_t) temp;
 
   return 0;
 }
@@ -103,7 +103,7 @@ int AXS(CPU_t *cpu)
 // And with memory
 int AND(CPU_t *cpu)
 {
-  uint8_t mem = Read(cpu, cpu->Address);
+  u8_t mem = Read(cpu, cpu->Address);
   cpu->A = mem & cpu->A;
   SetFlag(&cpu->P, PFLAG_NEGATIVE, cpu->A & 0x80);
   SetFlag(&cpu->P, PFLAG_ZERO, cpu->A == 0);
@@ -113,7 +113,7 @@ int AND(CPU_t *cpu)
 // Shift left A or Memory
 int ASL(CPU_t *cpu)
 {
-  uint8_t temp;
+  u8_t temp;
   if (cpu->AddressingMode == ADDR_IMP)
   {
     // Apply to A register
@@ -184,7 +184,7 @@ int BEQ(CPU_t *cpu)
 // Test Bits in Memory with Accumulator
 int BIT(CPU_t *cpu)
 {
-  uint8_t mem = Read(cpu, cpu->Address);
+  u8_t mem = Read(cpu, cpu->Address);
   SetFlag(&cpu->P, PFLAG_NEGATIVE, mem & 0x80);
   SetFlag(&cpu->P, PFLAG_OVERFLOW, mem & 0x40);
   SetFlag(&cpu->P, PFLAG_ZERO, (mem & cpu->A) == 0);
@@ -237,12 +237,12 @@ int BPL(CPU_t *cpu)
 int BRK(CPU_t *cpu)
 {
   // BRK is weird because it pushes PC + 2, skipping a byte after the BRK instruction
-  uint16_t pcToPush = cpu->InstructionPC + 2;
+  u16_t pcToPush = cpu->InstructionPC + 2;
   // Push PC (hi, then low)
   Push(cpu, pcToPush >> 8);
-  Push(cpu, (uint8_t)pcToPush);
+  Push(cpu, (u8_t)pcToPush);
   // Push P
-  uint8_t statusByte = cpu->P;
+  u8_t statusByte = cpu->P;
   // Set B flag correctly before pushing
   SetFlag(&statusByte, PFLAG_B0, true);   // 1 = BRK
   SetFlag(&statusByte, PFLAG_B1, true);   // Always 1
@@ -314,8 +314,8 @@ int CLV(CPU_t *cpu)
 int CMP(CPU_t *cpu)
 {
   // Do A - M and update Z, N and C
-  uint8_t mem = Read(cpu, cpu->Address);
-  uint16_t temp = cpu->A + ~mem + 1;
+  u8_t mem = Read(cpu, cpu->Address);
+  u16_t temp = cpu->A + ~mem + 1;
   SetFlag(&cpu->P, PFLAG_CARRY, cpu->A >= mem);
   SetFlag(&cpu->P, PFLAG_NEGATIVE, temp & 0x80);
   SetFlag(&cpu->P, PFLAG_ZERO, (temp & 0xFF) == 0x00);
@@ -326,8 +326,8 @@ int CMP(CPU_t *cpu)
 int CPX(CPU_t *cpu)
 {
   // Do X - M and update Z, N and C
-  uint8_t mem = Read(cpu, cpu->Address);
-  uint16_t temp = cpu->X + ~mem + 1;
+  u8_t mem = Read(cpu, cpu->Address);
+  u16_t temp = cpu->X + ~mem + 1;
   SetFlag(&cpu->P, PFLAG_CARRY, cpu->X >= mem);
   SetFlag(&cpu->P, PFLAG_NEGATIVE, temp & 0x80);
   SetFlag(&cpu->P, PFLAG_ZERO, (temp & 0xFF) == 0x00);
@@ -338,8 +338,8 @@ int CPX(CPU_t *cpu)
 int CPY(CPU_t *cpu)
 {
   // Do Y - M and update Z, N and C
-  uint8_t mem = Read(cpu, cpu->Address);
-  uint16_t temp = cpu->Y + ~mem + 1;
+  u8_t mem = Read(cpu, cpu->Address);
+  u16_t temp = cpu->Y + ~mem + 1;
   SetFlag(&cpu->P, PFLAG_CARRY, cpu->Y >= mem);
   SetFlag(&cpu->P, PFLAG_NEGATIVE, temp & 0x80);
   SetFlag(&cpu->P, PFLAG_ZERO, (temp & 0xFF) == 0x00);
@@ -358,7 +358,7 @@ int DCP(CPU_t *cpu)
 // Decrement memory
 int DEC(CPU_t *cpu)
 {
-  uint16_t temp = Read(cpu, cpu->Address);
+  u16_t temp = Read(cpu, cpu->Address);
   temp--;
   Write(cpu, cpu->Address, temp);
   SetFlag(&cpu->P, PFLAG_NEGATIVE, temp & 0x80);
@@ -387,7 +387,7 @@ int DEY(CPU_t *cpu)
 // XOR memory with A, store in A
 int EOR(CPU_t *cpu)
 {
-  uint8_t temp = Read(cpu, cpu->Address);
+  u8_t temp = Read(cpu, cpu->Address);
   temp = temp ^ cpu->A;
   SetFlag(&cpu->P, PFLAG_NEGATIVE, temp & 0x80);
   SetFlag(&cpu->P, PFLAG_ZERO, temp == 0x00);
@@ -398,7 +398,7 @@ int EOR(CPU_t *cpu)
 // Increment memory
 int INC(CPU_t *cpu)
 {
-  uint16_t temp = Read(cpu, cpu->Address);
+  u16_t temp = Read(cpu, cpu->Address);
   temp++;
   Write(cpu, cpu->Address, temp);
   SetFlag(&cpu->P, PFLAG_NEGATIVE, temp & 0x80);
@@ -445,10 +445,10 @@ int JSR(CPU_t *cpu)
 {
   // Need to push PC + 2, but PC has already been incremented at this point
   // We use InstructionPC instead
-  uint16_t pcToPush = cpu->InstructionPC + 2;
+  u16_t pcToPush = cpu->InstructionPC + 2;
   // Push PC (hi, then low)
   Push(cpu, pcToPush >> 8);
-  Push(cpu, (uint8_t)pcToPush);
+  Push(cpu, (u8_t)pcToPush);
   // PC is not touched after Instruction action, so this will jump us to address
   cpu->PC = cpu->Address;
   return 0;
@@ -457,7 +457,7 @@ int JSR(CPU_t *cpu)
 // Illegal: mem AND S -> A,X,S
 int LAS(CPU_t *cpu)
 {
-  uint8_t temp = Read(cpu, cpu->Address) & cpu->S;
+  u8_t temp = Read(cpu, cpu->Address) & cpu->S;
   SetFlag(&cpu->P, PFLAG_NEGATIVE, temp & 0x80);
   SetFlag(&cpu->P, PFLAG_ZERO, temp == 0x00);
   cpu->A = temp;
@@ -469,7 +469,7 @@ int LAS(CPU_t *cpu)
 // Illegal: Load A and X from memory
 int LAX(CPU_t *cpu)
 {
-  uint8_t temp = Read(cpu, cpu->Address);
+  u8_t temp = Read(cpu, cpu->Address);
   SetFlag(&cpu->P, PFLAG_NEGATIVE, temp & 0x80);
   SetFlag(&cpu->P, PFLAG_ZERO, temp == 0x00);
   cpu->A = temp;
@@ -480,7 +480,7 @@ int LAX(CPU_t *cpu)
 // Load A from memory
 int LDA(CPU_t *cpu)
 {
-  uint8_t temp = Read(cpu, cpu->Address);
+  u8_t temp = Read(cpu, cpu->Address);
   SetFlag(&cpu->P, PFLAG_NEGATIVE, temp & 0x80);
   SetFlag(&cpu->P, PFLAG_ZERO, temp == 0x00);
   cpu->A = temp;
@@ -490,7 +490,7 @@ int LDA(CPU_t *cpu)
 // Load X from memory
 int LDX(CPU_t *cpu)
 {
-  uint8_t temp = Read(cpu, cpu->Address);
+  u8_t temp = Read(cpu, cpu->Address);
   SetFlag(&cpu->P, PFLAG_NEGATIVE, temp & 0x80);
   SetFlag(&cpu->P, PFLAG_ZERO, temp == 0x00);
   cpu->X = temp;
@@ -500,7 +500,7 @@ int LDX(CPU_t *cpu)
 // Load Y from memory
 int LDY(CPU_t *cpu)
 {
-  uint8_t temp = Read(cpu, cpu->Address);
+  u8_t temp = Read(cpu, cpu->Address);
   SetFlag(&cpu->P, PFLAG_NEGATIVE, temp & 0x80);
   SetFlag(&cpu->P, PFLAG_ZERO, temp == 0x00);
   cpu->Y = temp;
@@ -510,7 +510,7 @@ int LDY(CPU_t *cpu)
 // Shift right A or Memory
 int LSR(CPU_t *cpu)
 {
-  uint8_t temp;
+  u8_t temp;
   if (cpu->AddressingMode == ADDR_IMP)
   {
     // Apply to A register
@@ -547,7 +547,7 @@ int NOP(CPU_t *cpu)
 // OR memory with A
 int ORA(CPU_t *cpu)
 {
-  uint8_t mem = Read(cpu, cpu->Address);
+  u8_t mem = Read(cpu, cpu->Address);
   cpu->A = mem | cpu->A;
   SetFlag(&cpu->P, PFLAG_NEGATIVE, cpu->A & 0x80);
   SetFlag(&cpu->P, PFLAG_ZERO, cpu->A == 0);
@@ -564,7 +564,7 @@ int PHA(CPU_t *cpu)
 // Push P (status flags) to stack
 int PHP(CPU_t *cpu)
 {
-  uint8_t pToPush = cpu->P;
+  u8_t pToPush = cpu->P;
   // Both B flags are set when pushed with PHP
   SetFlag(&pToPush, PFLAG_B0, true);
   SetFlag(&pToPush, PFLAG_B1, true);
@@ -603,7 +603,7 @@ int RLA(CPU_t *cpu)
 // Rotate One Left (but the carry is part of it)
 int ROL(CPU_t *cpu)
 {
-  uint16_t temp;
+  u16_t temp;
   if (cpu->AddressingMode == ADDR_IMP)
   {
     // Apply to A register
@@ -615,7 +615,7 @@ int ROL(CPU_t *cpu)
     // Bit that was shifted out of LSB becomes carry
     SetFlag(&cpu->P, PFLAG_CARRY, temp & 0x0100);
 
-    cpu->A = (uint8_t)temp;
+    cpu->A = (u8_t)temp;
 
     SetFlag(&cpu->P, PFLAG_NEGATIVE, cpu->A & 0x80);
     SetFlag(&cpu->P, PFLAG_ZERO, cpu->A == 0);
@@ -632,7 +632,7 @@ int ROL(CPU_t *cpu)
     SetFlag(&cpu->P, PFLAG_CARRY, temp & 0x0100);
     // Clear high byte so it doesn't mess up flag logic below
     temp &= 0x00FF;
-    Write(cpu, cpu->Address, (uint8_t)temp);
+    Write(cpu, cpu->Address, (u8_t)temp);
 
     SetFlag(&cpu->P, PFLAG_NEGATIVE, temp & 0x80);
     SetFlag(&cpu->P, PFLAG_ZERO, temp == 0x00);
@@ -643,7 +643,7 @@ int ROL(CPU_t *cpu)
 // Rotate One Right (but the carry is part of it)
 int ROR(CPU_t *cpu)
 {
-  uint16_t temp;
+  u16_t temp;
   if (cpu->AddressingMode == ADDR_IMP)
   {
     // Apply to A register
@@ -654,7 +654,7 @@ int ROR(CPU_t *cpu)
     // Now we can shift it down and store it
     temp >>= 1;
 
-    cpu->A = (uint8_t)temp;
+    cpu->A = (u8_t)temp;
 
     SetFlag(&cpu->P, PFLAG_NEGATIVE, cpu->A & 0x80);
     SetFlag(&cpu->P, PFLAG_ZERO, cpu->A == 0);
@@ -670,7 +670,7 @@ int ROR(CPU_t *cpu)
     temp >>= 1;
     // Clear high byte so it doesn't mess up flag logic below
     temp &= 0x00FF;
-    Write(cpu, cpu->Address, (uint8_t)temp);
+    Write(cpu, cpu->Address, (u8_t)temp);
 
     SetFlag(&cpu->P, PFLAG_NEGATIVE, temp & 0x80);
     SetFlag(&cpu->P, PFLAG_ZERO, temp == 0x00);
@@ -689,7 +689,7 @@ int RRA(CPU_t *cpu)
 // Return from interrupt
 int RTI(CPU_t *cpu)
 {
-  uint16_t newPC;
+  u16_t newPC;
   // Pop status register from stack
   cpu->P = Pop(cpu);
   // Is this always supposed to be this way?
@@ -697,7 +697,7 @@ int RTI(CPU_t *cpu)
   SetFlag(&cpu->P, PFLAG_B1, true);
   // Pop PC from stack
   newPC = Pop(cpu);
-  newPC |= (uint16_t)Pop(cpu) << 8;
+  newPC |= (u16_t)Pop(cpu) << 8;
   cpu->PC = newPC;
   return 0;
 }
@@ -705,10 +705,10 @@ int RTI(CPU_t *cpu)
 // Return from subroutine
 int RTS(CPU_t *cpu)
 {
-  uint16_t newPC;
+  u16_t newPC;
   // Pop PC from stack
   newPC = Pop(cpu);
-  newPC |= (uint16_t)Pop(cpu) << 8;
+  newPC |= (u16_t)Pop(cpu) << 8;
   // Need to increment popped value by 1 according to spec
   cpu->PC = newPC + 1;
   return 0;
@@ -724,8 +724,8 @@ int SAX(CPU_t *cpu)
 // Subtract with borrow
 int SBC(CPU_t *cpu)
 {
-  uint8_t mem;
-  uint16_t tempResult;
+  u8_t mem;
+  u16_t tempResult;
   // Invert mem and the rest is identical to ADC!
   mem = ~Read(cpu, cpu->Address);
   tempResult = cpu->A + mem + IsFlagSet(&cpu->P, PFLAG_CARRY);
@@ -737,7 +737,7 @@ int SBC(CPU_t *cpu)
   SetFlag(&cpu->P, PFLAG_OVERFLOW, ((cpu->A & 0x80) ^ (tempResult & 0x80)) & ~((cpu->A & 0x80) ^ (mem & 0x80)));
 
   // Store result
-  cpu->A = (uint8_t)tempResult;
+  cpu->A = (u8_t)tempResult;
 
   return 1;
 }
@@ -886,8 +886,8 @@ int TAS(CPU_t *cpu)
 int SHY(CPU_t *cpu)
 {
   // Weirdness: http://forums.nesdev.com/viewtopic.php?f=3&t=3831&start=30
-  uint8_t value = cpu->Y & ((cpu->Address >> 8) + 1);
-  uint16_t address = (value << 8) | (cpu->Address & 0xFF);
+  u8_t value = cpu->Y & ((cpu->Address >> 8) + 1);
+  u16_t address = (value << 8) | (cpu->Address & 0xFF);
   Write(cpu, address, value);
   return 0;
 }
@@ -895,8 +895,8 @@ int SHY(CPU_t *cpu)
 // Illegal: Store X & H into address (kind of)
 int SHX(CPU_t *cpu)
 {
-  uint8_t value = cpu->X & ((cpu->Address >> 8) + 1);
-  uint16_t address = (value << 8) | (cpu->Address & 0xFF);
+  u8_t value = cpu->X & ((cpu->Address >> 8) + 1);
+  u16_t address = (value << 8) | (cpu->Address & 0xFF);
   Write(cpu, address, value);
   return 0;
 }

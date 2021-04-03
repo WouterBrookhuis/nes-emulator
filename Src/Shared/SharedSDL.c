@@ -148,8 +148,7 @@ int SharedSDL_Start()
 //    SharedSDL_PrintTiming(2, "PPU");
 //    SharedSDL_PrintTiming(3, "CPU");
 
-    fflush(stdout);
-
+//
 //    for(uint_fast8_t i = 0; i < 5; i++)
 //    {
 //      printf("%I64u, ", _perfTimerAccum[i]);
@@ -157,6 +156,7 @@ int SharedSDL_Start()
 //    }
 //
 //    printf("\n");
+    fflush(stdout);
   }
 
   //close_window_on_error:
@@ -167,25 +167,25 @@ int SharedSDL_Start()
   return 0;
 }
 
-void SharedSDL_BeginTiming(uint32_t index)
+void SharedSDL_BeginTiming(unsigned int index)
 {
   _perfTimerStack[index] = SDL_GetPerformanceCounter();
 }
 
-void SharedSDL_EndTiming(uint32_t index)
+void SharedSDL_EndTiming(unsigned int index)
 {
   uint64_t delta = SDL_GetPerformanceCounter() - _perfTimerStack[index];
   _perfTimerAccum[index] += delta;
   _perfTimerCount[index]++;
 }
 
-void SharedSDL_ResetTiming(uint32_t index)
+void SharedSDL_ResetTiming(unsigned int index)
 {
   _perfTimerAccum[index] = 0;
   _perfTimerCount[index] = 0;
 }
 
-void SharedSDL_PrintTiming(uint32_t index, const char *name)
+void SharedSDL_PrintTiming(unsigned int index, const char *name)
 {
   uint64_t avg = 0;
   if (_perfTimerCount[index] != 0)

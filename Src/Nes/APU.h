@@ -8,8 +8,7 @@
 #ifndef SRC_NES_APU_H_
 #define SRC_NES_APU_H_
 
-#include <stdint.h>
-#include <stdbool.h>
+#include "Types.h"
 #include "ClockedRegister.h"
 
 typedef struct _Bus_t Bus_t;
@@ -50,7 +49,7 @@ typedef struct _APU_t
 
 void APU_Initialize(APU_t *apu);
 void APU_Tick(APU_t *apu);
-uint8_t APU_ReadFromCpu(APU_t *apu, uint16_t address);
-void APU_WriteFromCpu(APU_t *apu, uint16_t address, uint8_t data);
+u8_t APU_ReadFromCpu(APU_t *apu, u16_t address);
+void APU_WriteFromCpu(APU_t *apu, u16_t address, u8_t data);
 
 #endif /* SRC_NES_APU_H_ */

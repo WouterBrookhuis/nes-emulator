@@ -49,7 +49,7 @@ void CPU_IRQ(CPU_t *cpu, bool assert)
 void CPU_Tick(CPU_t *cpu)
 {
   const InstructionTableEntry_t *newInstruction;
-  uint16_t readAddress;
+  u16_t readAddress;
   bool addressingCanHaveExtraCycle = false;
   bool instructionCanHaveExtraCycle = false;
 
@@ -92,9 +92,9 @@ void CPU_Tick(CPU_t *cpu)
       // NMI takes priority over other things
       // Push PC (hi, then low)
       Push(cpu, cpu->PC >> 8);
-      Push(cpu, (uint8_t)cpu->PC);
+      Push(cpu, (u8_t)cpu->PC);
       // Push P
-      uint8_t statusByte = cpu->P;
+      u8_t statusByte = cpu->P;
       // Set B flag correctly before pushing
       SetFlag(&statusByte, PFLAG_B0, false);  // 1 = BRK, 0 = NMI/IRQ
       SetFlag(&statusByte, PFLAG_B1, true);   // Always 1
@@ -114,9 +114,9 @@ void CPU_Tick(CPU_t *cpu)
 //      // IRQ takes priority over other things, but not an NMI
 //      // Push PC (hi, then low)
 //      Push(cpu, cpu->PC >> 8);
-//      Push(cpu, (uint8_t)cpu->PC);
+//      Push(cpu, (u8_t)cpu->PC);
 //      // Push P
-//      uint8_t statusByte = cpu->P;
+//      u8_t statusByte = cpu->P;
 //      // Set B flag correctly before pushing
 //      SetFlag(&statusByte, PFLAG_B0, false);  // 1 = BRK, 0 = NMI/IRQ
 //      SetFlag(&statusByte, PFLAG_B1, true);   // Always 1

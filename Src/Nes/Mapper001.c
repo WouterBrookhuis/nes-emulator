@@ -11,7 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static bool Mapper001_ReadFromCpu(Mapper_t *mapper, uint16_t address, uint8_t *data)
+static bool Mapper001_ReadFromCpu(Mapper_t *mapper, u16_t address, u8_t *data)
 {
   Mapper001Data_t *customData = (Mapper001Data_t*) mapper->CustomData;
 
@@ -24,10 +24,10 @@ static bool Mapper001_ReadFromCpu(Mapper_t *mapper, uint16_t address, uint8_t *d
   else if (address >= 0x8000 && address <= 0xFFFF)
   {
     // Program ROM, may be a single 32k or two 16k banks
-    uint8_t bankMode = (customData->ControlRegister >> 2) & 0x03;
-    uint16_t externalBankBaseAddress;
-    uint32_t internalBankBaseAddress;
-    uint8_t selectedBank = (customData->ProgramRegister) & 0x0F;
+    u8_t bankMode = (customData->ControlRegister >> 2) & 0x03;
+    u16_t externalBankBaseAddress;
+    u32_t internalBankBaseAddress;
+    u8_t selectedBank = (customData->ProgramRegister) & 0x0F;
 
     if (bankMode == 0 || bankMode == 1)
     {
@@ -70,7 +70,7 @@ static bool Mapper001_ReadFromCpu(Mapper_t *mapper, uint16_t address, uint8_t *d
         internalBankBaseAddress = 0x3C000;
       }
     }
-    uint32_t index = address - externalBankBaseAddress + internalBankBaseAddress;
+    u32_t index = address - externalBankBaseAddress + internalBankBaseAddress;
     index &= (mapper->NumPrgBanks * SIZE_16KB - 1);
     *data = mapper->Memory[index];
     return true;
@@ -79,7 +79,7 @@ static bool Mapper001_ReadFromCpu(Mapper_t *mapper, uint16_t address, uint8_t *d
   return false;
 }
 
-static bool Mapper001_WriteFromCpu(Mapper_t *mapper, uint16_t address, uint8_t data)
+static bool Mapper001_WriteFromCpu(Mapper_t *mapper, u16_t address, u8_t data)
 {
   Mapper001Data_t *customData = (Mapper001Data_t*) mapper->CustomData;
   if (customData->PrgRam8k != NULL && address >= 0x6000 && address <= 0x7FFF)
@@ -105,7 +105,7 @@ static bool Mapper001_WriteFromCpu(Mapper_t *mapper, uint16_t address, uint8_t d
       customData->ShiftRegister |= ((data & 1) << 4);
 
       // Write to location, register is bits 14 and 13 of address
-      uint8_t regAddress = (address >> 13) & 0x03;
+      u8_t regAddress = (address >> 13) & 0x03;
       switch (regAddress)
       {
       case 0:
@@ -145,7 +145,7 @@ static bool Mapper001_WriteFromCpu(Mapper_t *mapper, uint16_t address, uint8_t d
   return false;
 }
 
-static bool Mapper001_ReadFromPpu(Mapper_t *mapper, uint16_t address, uint8_t *data)
+static bool Mapper001_ReadFromPpu(Mapper_t *mapper, u16_t address, u8_t *data)
 {
   // TODO: This is supposed to be banked!
   //Mapper000Data_t *customData = (Mapper000Data_t*) mapper->CustomData;
@@ -162,7 +162,7 @@ static bool Mapper001_ReadFromPpu(Mapper_t *mapper, uint16_t address, uint8_t *d
   return false;
 }
 
-static bool Mapper001_WriteFromPpu(Mapper_t *mapper, uint16_t address, uint8_t data)
+static bool Mapper001_WriteFromPpu(Mapper_t *mapper, u16_t address, u8_t data)
 {
   return false;
 }

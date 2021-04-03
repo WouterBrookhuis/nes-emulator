@@ -41,7 +41,7 @@
 #define ATTRFLAG_FLIP_HORIZONTAL      0x40
 #define ATTRFLAG_FLIP_VERTICAL        0x80
 
-static uint8_t BIT_REVERSE_TABLE[16] =
+static u8_t BIT_REVERSE_TABLE[16] =
 {
     0b0000, 0b1000, 0b0100, 0b1100, 0b0010, 0b1010, 0b0110, 0b1110,
     0b0001, 0b1001, 0b0101, 0b1101, 0b0011, 0b1011, 0b0111, 0b1111
@@ -49,7 +49,12 @@ static uint8_t BIT_REVERSE_TABLE[16] =
 
 static SDL_Surface *_renderSurface;
 
-static inline uint8_t ReverseByte(uint8_t byte)
+static inline uint_fast32_t IsInRange(uint_fast32_t low, uint_fast32_t high, uint_fast32_t value)
+{
+  return (value - low) <= (high - low);
+}
+
+static inline u8_t ReverseByte(u8_t byte)
 {
   return ((BIT_REVERSE_TABLE[byte & 0xF] << 4) | (BIT_REVERSE_TABLE[byte >> 4]));
 }
@@ -59,14 +64,14 @@ static inline bool IsRendering(PPU_t *ppu)
   return CR8_IsBitSet(ppu->Mask, MASKFLAG_BACKGROUND) || CR8_IsBitSet(ppu->Mask, MASKFLAG_SPRITES);
 }
 
-void PPU_RenderPixel(PPU_t *ppu, int x, int y, uint8_t pixel, uint8_t palette)
+void PPU_RenderPixel(const PPU_t *ppu, u16f_t x, u16f_t y, u8_t pixel, u8_t palette)
 {
   if (_renderSurface == NULL)
   {
     return;
   }
 
-  if (x < 0 || x >= _renderSurface->w || y < 0 || y >= _renderSurface->h)
+  if (!IsInRange(0, _renderSurface->w, x) || !IsInRange(0, _renderSurface->h, y))
   {
     return;
   }
@@ -77,20 +82,20 @@ void PPU_RenderPixel(PPU_t *ppu, int x, int y, uint8_t pixel, uint8_t palette)
     palette = 0;
   }
 
-  uint8_t colorPaletteIndex = Bus_ReadFromPPU(ppu->Bus, 0x3F00 + (palette << 2) + pixel);
+  u8_t colorPaletteIndex = Bus_ReadFromPPU(ppu->Bus, 0x3F00 + (palette << 2) + pixel);
   if (CR8_IsBitSet(ppu->Mask, MASKFLAG_GREYSCALE))
   {
     colorPaletteIndex &= 0x30;
   }
 
-  uint8_t r;
-  uint8_t g;
-  uint8_t b;
-  uint8_t *pixelPtr = (uint8_t*)_renderSurface->pixels +
-                    _renderSurface->w * _renderSurface->format->BytesPerPixel * y +
+  u8_t r;
+  u8_t g;
+  u8_t b;
+  u8_t *pixelPtr = (u8_t*)_renderSurface->pixels +
+                    _renderSurface->pitch * y +
                     _renderSurface->format->BytesPerPixel * x;
   Palette_GetRGB(colorPaletteIndex, &r, &g, &b);
-  *(uint32_t*)pixelPtr = SDL_MapRGB(_renderSurface->format, r, g, b);
+  *(u32_t*)pixelPtr = SDL_MapRGB(_renderSurface->format, r, g, b);
 }
 
 void PPU_SetRenderSurface(SDL_Surface *surface)
@@ -111,8 +116,8 @@ void PPU_Initialize(PPU_t *ppu)
 
   ppu->VCount = PPU_PRE_RENDER_SCANLINE;
 
-  ppu->OAMAsPtr = (uint8_t *)&ppu->OAM;
-  ppu->ActiveSpriteOAMAsPtr = (uint8_t *)&ppu->ActiveSpriteOAM;
+  ppu->OAMAsPtr = (u8_t *)&ppu->OAM;
+  ppu->ActiveSpriteOAMAsPtr = (u8_t *)&ppu->ActiveSpriteOAM;
 }
 
 void PPU_Reset(PPU_t *ppu)
@@ -150,7 +155,7 @@ static void IncrementY(PPU_t *ppu)
   {
     // Reset fine Y to 0
     ppu->V &= ~0x7000;
-    int y = (ppu->V & 0x03E0) >> 5;
+    u16f_t y = (ppu->V & 0x03E0) >> 5;
     if (y == 29)
     {
       // Reset coarse Y and toggle V nametable
@@ -172,19 +177,14 @@ static void IncrementY(PPU_t *ppu)
   }
 }
 
-static uint_fast32_t IsInRange(uint_fast32_t low, uint_fast32_t high, uint_fast32_t value)
-{
-  return (value - low) <= (high - low);
-}
-
-static uint16_t CalculateSpriteAddress(uint_fast16_t vCount, uint_fast16_t ctrl, const OAMEntry_t *spriteOAM, bool flipVertical)
+static u16_t CalculateSpriteAddress(u16f_t vCount, u16f_t ctrl, const OAMEntry_t *spriteOAM, bool flipVertical)
 {
   // If CTRLFLAG_SPRITE_ADDRESS (0x80) is set we use base address 0x1000 (0x80 << 5)
-  uint_fast16_t address = (ctrl & CTRLFLAG_SPRITE_ADDRESS) << 5;
+  u16f_t address = (ctrl & CTRLFLAG_SPRITE_ADDRESS) << 5;
   // Add the tile offset
-  address |= ((uint_fast16_t) spriteOAM->TileIndex << 4);
+  address |= ((u16f_t) spriteOAM->TileIndex << 4);
   // Add the row offset
-  uint_fast16_t rowOffset = (vCount - (uint_fast16_t) spriteOAM->Y);
+  u16f_t rowOffset = (vCount - (u16f_t) spriteOAM->Y);
   if (flipVertical)
   {
     rowOffset = ~rowOffset;
@@ -230,7 +230,7 @@ void PPU_Tick(PPU_t *ppu)
     // Memory accessing to get background data
     if (IsInRange(1, 257, ppu->HCount) || IsInRange(321, 337, ppu->HCount))
     {
-      uint8_t pixelCycle = ppu->HCount & 0x07;
+      u8_t pixelCycle = ppu->HCount & 0x07;
 
       if (pixelCycle == 1)
       {
@@ -270,7 +270,7 @@ void PPU_Tick(PPU_t *ppu)
         // Fetch low BG tile byte
         ppu->NextBgTileLow = Bus_ReadFromPPU(ppu->Bus,
                                              (CR8_IsBitSet(ppu->Ctrl, CTRLFLAG_BACKGROUND_ADDRESS) ? 0x1000 : 0x000)
-                                             + ((uint16_t)ppu->NextBgTileId << 4)
+                                             + ((u16f_t)ppu->NextBgTileId << 4)
                                              + ((ppu->V >> 12) & 0x07) + 0);
       }
       else if (pixelCycle == 7)
@@ -278,7 +278,7 @@ void PPU_Tick(PPU_t *ppu)
         // Fetch high BG tile byte
         ppu->NextBgTileHigh = Bus_ReadFromPPU(ppu->Bus,
                                               (CR8_IsBitSet(ppu->Ctrl, CTRLFLAG_BACKGROUND_ADDRESS) ? 0x1000 : 0x000)
-                                              + ((uint16_t)ppu->NextBgTileId << 4)
+                                              + ((u16f_t)ppu->NextBgTileId << 4)
                                               + ((ppu->V >> 12) & 0x07) + 8);
       }
     }
@@ -291,7 +291,7 @@ void PPU_Tick(PPU_t *ppu)
       if (ppu->HCount < 65)
       {
         // Sprite evaluation: Clear secondary OAM
-        uint8_t byte = (ppu->HCount - 1) / 2;
+        u8f_t byte = (ppu->HCount - 1) / 2;
 
         ppu->ActiveSpriteOAMAsPtr[byte] = 0xFF;
       }
@@ -394,8 +394,8 @@ void PPU_Tick(PPU_t *ppu)
     if (IsInRange(257, 320, ppu->HCount))
     {
       // Sprite Evaluation: Sprite data loading for the next scanline
-      uint8_t pixelCycle = ppu->HCount & 0x7;
-      uint8_t spriteIndex = (ppu->HCount - 257) >> 3;
+      u8_t pixelCycle = ppu->HCount & 0x7;
+      u8_t spriteIndex = (ppu->HCount - 257) >> 3;
 
       // Reset OAM address
       CR8_Write(&ppu->OAMAddress, 0);
@@ -425,13 +425,13 @@ void PPU_Tick(PPU_t *ppu)
       case 5:
       {
         // Fetch low sprite tile byte
-        uint16_t address = CalculateSpriteAddress(ppu->VCount, CR8_Read(ppu->Ctrl), &ppu->ActiveSpriteOAM[spriteIndex], activeSprite->Attributes & ATTRFLAG_FLIP_VERTICAL);
+        u16_t address = CalculateSpriteAddress(ppu->VCount, CR8_Read(ppu->Ctrl), &ppu->ActiveSpriteOAM[spriteIndex], activeSprite->Attributes & ATTRFLAG_FLIP_VERTICAL);
         activeSprite->SRPatternLow = Bus_ReadFromPPU(ppu->Bus, address);
         break;
       }
       case 7:
       {
-        uint16_t address = CalculateSpriteAddress(ppu->VCount, CR8_Read(ppu->Ctrl), &ppu->ActiveSpriteOAM[spriteIndex], activeSprite->Attributes & ATTRFLAG_FLIP_VERTICAL) + 8;
+        u16_t address = CalculateSpriteAddress(ppu->VCount, CR8_Read(ppu->Ctrl), &ppu->ActiveSpriteOAM[spriteIndex], activeSprite->Attributes & ATTRFLAG_FLIP_VERTICAL) + 8;
         activeSprite->SRPatternHigh = Bus_ReadFromPPU(ppu->Bus, address);
 
         // Do horizontal mirroring
@@ -449,19 +449,22 @@ void PPU_Tick(PPU_t *ppu)
   }
 
   // Try to render a pixel
-  uint8_t bgPixel = 0;
-  uint8_t bgPalette = 0;
-  uint8_t spPixel = 0;
-  uint8_t spPalette = 0;
+  u8_t bgPixel = 0;
+  u8_t bgPalette = 0;
+  u8_t spPixel = 0;
+  u8_t spPalette = 0;
   bool bgPriority;
 
-  if (CR8_IsBitSet(ppu->Mask, MASKFLAG_BACKGROUND))
+  u16f_t minBackgroundX = CR8_IsBitSet(ppu->Mask, MASKFLAG_BACKGROUND_LEFT) ? 0 : 8;
+  u16f_t minSpriteX = CR8_IsBitSet(ppu->Mask, MASKFLAG_SPRITES_LEFT) ? 0 : 8;
+
+  if (CR8_IsBitSet(ppu->Mask, MASKFLAG_BACKGROUND) && ppu->HCount >= minBackgroundX)
   {
     // Try to render a pixel, RenderPixel will deal with any out of bounds write attempts
-    uint16_t pixelBit = (0x8000 >> ppu->X);
-    uint8_t pixel = ((ppu->SRPatternLow  & pixelBit) > 0) |
+    u16_t pixelBit = (0x8000 >> ppu->X);
+    u8_t pixel = ((ppu->SRPatternLow  & pixelBit) > 0) |
                     (((ppu->SRPatternHigh &  pixelBit) > 0) << 1);
-    uint8_t palette = ((ppu->SRAttributeLow  & pixelBit) > 0) |
+    u8_t palette = ((ppu->SRAttributeLow  & pixelBit) > 0) |
                       (((ppu->SRAttributeHigh &  pixelBit) > 0) << 1);
 
     bgPixel = pixel;
@@ -470,17 +473,17 @@ void PPU_Tick(PPU_t *ppu)
 
   bool isSpriteZero = false;
 
-  if (CR8_IsBitSet(ppu->Mask, MASKFLAG_SPRITES))
+  if (CR8_IsBitSet(ppu->Mask, MASKFLAG_SPRITES) && ppu->HCount >= minSpriteX)
   {
     // Find a sprite pixel to draw
-    for (uint_fast8_t i = 0; i < 8; i++)
+    for (u8f_t i = 0; i < 8; i++)
     {
       if (ppu->ActiveSpriteData[i].X == 0)
       {
-        uint8_t pixel = ((ppu->ActiveSpriteData[i].SRPatternLow & 0x80) > 0) |
-                        (((ppu->ActiveSpriteData[i].SRPatternHigh &  0x80) > 0) << 1);
-        // TODO: Fix the fucking palette
-        uint8_t palette = (ppu->ActiveSpriteData[i].Attributes & ATTRFLAG_PALLETE_MASK) + 4;
+        u8f_t pixel = ((ppu->ActiveSpriteData[i].SRPatternLow & 0x80) > 0) |
+            (((ppu->ActiveSpriteData[i].SRPatternHigh &  0x80) > 0) << 1);
+
+        u8f_t palette = (ppu->ActiveSpriteData[i].Attributes & ATTRFLAG_PALLETE_MASK) + 4;
 
         if (pixel != 0)
         {
@@ -632,10 +635,10 @@ void PPU_Tick(PPU_t *ppu)
   SharedSDL_EndTiming(2);
 }
 
-uint8_t PPU_ReadFromCpu(PPU_t *ppu, uint16_t address)
+u8_t PPU_ReadFromCpu(PPU_t *ppu, u16_t address)
 {
-  uint8_t result;
-  uint16_t wrappedAddress = address & 0x0007;
+  u8_t result;
+  u16_t wrappedAddress = address & 0x0007;
 
   switch (wrappedAddress)
   {
@@ -696,9 +699,9 @@ uint8_t PPU_ReadFromCpu(PPU_t *ppu, uint16_t address)
   return 0x55;
 }
 
-void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data)
+void PPU_WriteFromCpu(PPU_t *ppu, u16_t address, u8_t data)
 {
-  uint16_t wrappedAddress = address & 0x0007;
+  u16_t wrappedAddress = address & 0x0007;
 
   // Update the latched data on any write
   ppu->LatchedData = data;
@@ -709,7 +712,7 @@ void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data)
     // TODO: Does this need clocking?
     // Update temp register with nametable info
     // Bits 10-11 are the ones we need
-    ppu->T = (ppu->T & ~0x0C00) | (((uint16_t)data << 10) & 0x0C00);
+    ppu->T = (ppu->T & ~0x0C00) | (((u16_t)data << 10) & 0x0C00);
 
     CR8_Write(&ppu->Ctrl, data);
     break;

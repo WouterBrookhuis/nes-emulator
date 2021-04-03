@@ -8,8 +8,7 @@
 #ifndef SRC_NES_INESLOADER_H_
 #define SRC_NES_INESLOADER_H_
 
-#include <stdint.h>
-#include <stdbool.h>
+#include "Types.h"
 
 #include "Mapper.h"
 
@@ -28,15 +27,15 @@
 #pragma pack(push, 1)
 typedef struct
 {
-  uint8_t Magic[4];
-  uint8_t PrgRomSize;
-  uint8_t ChrRomSize;
-  uint8_t Flags6;
-  uint8_t Flags7;
-  uint8_t Flags8;
-  uint8_t Flags9;
-  uint8_t Flags10;
-  uint8_t Padding[5];
+  u8_t Magic[4];
+  u8_t PrgRomSize;
+  u8_t ChrRomSize;
+  u8_t Flags6;
+  u8_t Flags7;
+  u8_t Flags8;
+  u8_t Flags9;
+  u8_t Flags10;
+  u8_t Padding[5];
 } INesHeader_t;
 #pragma pack(pop)
 

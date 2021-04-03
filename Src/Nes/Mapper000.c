@@ -12,11 +12,11 @@
 #include <stdlib.h>
 #include "log.h"
 
-static uint8_t _mapper000Ram[SIZE_8KB];
+static u8_t _mapper000Ram[SIZE_8KB];
 
 bool Mapper000_ReadFromCpu(Mapper_t *mapper,
-                           uint16_t address,
-                           uint8_t *data)
+                           u16_t address,
+                           u8_t *data)
 {
   Mapper000Data_t *customData = (Mapper000Data_t*) mapper->CustomData;
   if (address >= 0x6000 && address <= 0x7FFF)
@@ -28,8 +28,8 @@ bool Mapper000_ReadFromCpu(Mapper_t *mapper,
   else if (address >= 0x8000 && address <= 0xFFFF)
   {
     // Program ROM, may be two 16k banks or a mirrored 16k bank
-    uint16_t externalBankBaseAddress;
-    uint32_t internalBankBaseAddress;
+    u16_t externalBankBaseAddress;
+    u32_t internalBankBaseAddress;
 
     if (mapper->NumPrgBanks == 1)
     {
@@ -59,7 +59,7 @@ bool Mapper000_ReadFromCpu(Mapper_t *mapper,
       }
     }
 
-    uint32_t index = address - externalBankBaseAddress
+    u32_t index = address - externalBankBaseAddress
         + internalBankBaseAddress;
     *data = mapper->Memory[index];
     return true;
@@ -69,8 +69,8 @@ bool Mapper000_ReadFromCpu(Mapper_t *mapper,
 }
 
 bool Mapper000_WriteFromCpu(Mapper_t *mapper,
-                            uint16_t address,
-                            uint8_t data)
+                            u16_t address,
+                            u8_t data)
 {
   Mapper000Data_t *customData = (Mapper000Data_t*) mapper->CustomData;
   if (address >= 0x6000 && address <= 0x7FFF)
@@ -82,8 +82,8 @@ bool Mapper000_WriteFromCpu(Mapper_t *mapper,
   else if (address >= 0x8000 && address <= 0xFFFF)
   {
     // Program ROM, may be two 16k banks or a mirrored 16k bank
-    uint16_t externalBankBaseAddress;
-    uint32_t internalBankBaseAddress;
+    u16_t externalBankBaseAddress;
+    u32_t internalBankBaseAddress;
 
     if (mapper->NumPrgBanks == 1)
     {
@@ -113,7 +113,7 @@ bool Mapper000_WriteFromCpu(Mapper_t *mapper,
       }
     }
 
-    uint32_t index = address - externalBankBaseAddress
+    u32_t index = address - externalBankBaseAddress
         + internalBankBaseAddress;
     mapper->Memory[index] = data;
     return true;
@@ -123,8 +123,8 @@ bool Mapper000_WriteFromCpu(Mapper_t *mapper,
 }
 
 bool Mapper000_ReadFromPpu(Mapper_t *mapper,
-                           uint16_t address,
-                           uint8_t *data)
+                           u16_t address,
+                           u8_t *data)
 {
   if (address >= 0x0000 && address <= 0x1FFF)
   {
@@ -140,8 +140,8 @@ bool Mapper000_ReadFromPpu(Mapper_t *mapper,
 }
 
 bool Mapper000_WriteFromPpu(Mapper_t *mapper,
-                            uint16_t address,
-                            uint8_t data)
+                            u16_t address,
+                            u8_t data)
 {
   return false;
 }
