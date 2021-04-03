@@ -523,7 +523,7 @@ static bool Update(float deltaTime)
     _frameStepKeyWasPressed = false;
   }
 
-  SharedSDL_BeginTiming(4);
+  SharedSDL_BeginTiming(PERF_INDEX_EMULATE);
   if (_run)
   {
     // Realtime-ish speed
@@ -533,7 +533,7 @@ static bool Update(float deltaTime)
       _run = false;
     }
   }
-  SharedSDL_EndTiming(4);
+  SharedSDL_EndTiming(PERF_INDEX_EMULATE);
 
   FormatInstruction(cpu, _textBuffer);
 

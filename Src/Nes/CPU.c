@@ -81,7 +81,7 @@ void CPU_Tick(CPU_t *cpu)
     return;
   }
 
-  SharedSDL_BeginTiming(3);
+  SharedSDL_BeginTiming(PERF_INDEX_CPU);
 
   cpu->CycleCount++;
 
@@ -303,5 +303,5 @@ void CPU_Tick(CPU_t *cpu)
   // Always decrement cycle counter
   cpu->CyclesLeftForInstruction--;
 
-  SharedSDL_EndTiming(3);
+  SharedSDL_EndTiming(PERF_INDEX_CPU);
 }

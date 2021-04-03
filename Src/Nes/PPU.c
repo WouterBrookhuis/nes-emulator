@@ -211,7 +211,7 @@ void PPU_ClockRegisters(PPU_t *ppu)
 
 void PPU_Tick(PPU_t *ppu)
 {
-  SharedSDL_BeginTiming(2);
+  SharedSDL_BeginTiming(PERF_INDEX_PPU);
 
   bool isPreRenderScanline = (PPU_PRE_RENDER_SCANLINE == ppu->VCount);
   bool isVisibleScanline = IsInRange(0, 239, ppu->VCount);
@@ -223,6 +223,8 @@ void PPU_Tick(PPU_t *ppu)
   ppu->CyclesSinceReset++;
 
   // Do PPU things
+
+  SharedSDL_BeginTiming(PERF_INDEX_PPU_BG_FETCH);
 
   // Visible scanlines and pre-render scanline
   if (isPreRenderScanline || isVisibleScanline)
@@ -283,6 +285,10 @@ void PPU_Tick(PPU_t *ppu)
       }
     }
   }
+
+  SharedSDL_EndTiming(PERF_INDEX_PPU_BG_FETCH);
+
+  SharedSDL_BeginTiming(PERF_INDEX_PPU_SPRITE_EVAL);
 
   if (isVisibleScanline)
   {
@@ -389,6 +395,10 @@ void PPU_Tick(PPU_t *ppu)
     }
   }
 
+  SharedSDL_EndTiming(PERF_INDEX_PPU_SPRITE_EVAL);
+
+  SharedSDL_BeginTiming(PERF_INDEX_PPU_SPRITE_FETCH);
+
   if (isVisibleScanline || isPreRenderScanline)
   {
     if (IsInRange(257, 320, ppu->HCount))
@@ -447,6 +457,10 @@ void PPU_Tick(PPU_t *ppu)
       }
     }
   }
+
+  SharedSDL_EndTiming(PERF_INDEX_PPU_SPRITE_FETCH);
+
+  SharedSDL_BeginTiming(PERF_INDEX_PPU_ORDERING);
 
   // Try to render a pixel
   u8_t bgPixel = 0;
@@ -546,6 +560,9 @@ void PPU_Tick(PPU_t *ppu)
   // NMI line is enabled iff it's enabled in CTRL and STATUS has VBLANK active
   Bus_NMI(ppu->Bus, CR8_IsBitSet(ppu->Ctrl, CTRLFLAG_VBLANK_NMI) && CR8_IsBitSet(ppu->Status, STATFLAG_VBLANK));
 
+  SharedSDL_EndTiming(PERF_INDEX_PPU_ORDERING);
+
+  SharedSDL_BeginTiming(PERF_INDEX_PPU_INCREMENTS);
 
   // Address increment things
   if ((isPreRenderScanline || isVisibleScanline))
@@ -567,7 +584,7 @@ void PPU_Tick(PPU_t *ppu)
 
     if (isVisibleHCount && CR8_IsBitSet(ppu->Mask, MASKFLAG_SPRITES))
     {
-      for (int_fast8_t i = 0; i < 8; i++)
+      for (unsigned int i =  8; i--;)
       {
         if (ppu->ActiveSpriteData[i].X > 0)
         {
@@ -590,12 +607,12 @@ void PPU_Tick(PPU_t *ppu)
       {
         IncrementY(ppu);
       }
-      if (ppu->HCount == 257)
+      else if (ppu->HCount == 257)
       {
         // Copy horizontal position from T to V
         ppu->V = (ppu->T & 0x041F) | (ppu->V & ~0x041F);
       }
-      if (isPreRenderScanline && ppu->HCount >= 280 && ppu->HCount <= 304)
+      else if (isPreRenderScanline && IsInRange(280, 304, ppu->HCount))
       {
         // Copy vertical bits from T to V
         ppu->V = (ppu->T & ~0x041F) | (ppu->V & 0x041F);
@@ -603,7 +620,7 @@ void PPU_Tick(PPU_t *ppu)
       if (ppu->HCount != 0 && (ppu->HCount <= 256 || ppu->HCount >= 328))
       {
         // Increment horizontal of V every 8 dots (except at dot 0)
-        if (ppu->HCount % 8 == 0)
+        if ((ppu->HCount & 7) == 0)
         {
           IncrementCoarseX(ppu);
         }
@@ -611,8 +628,14 @@ void PPU_Tick(PPU_t *ppu)
     }
   }
 
+  SharedSDL_EndTiming(PERF_INDEX_PPU_INCREMENTS);
+
+  SharedSDL_BeginTiming(PERF_INDEX_PPU_PIXEL_OUT);
+
   // Render the pixel to the screen
   PPU_RenderPixel(ppu, ppu->HCount, ppu->VCount, bgPixel, bgPalette);
+
+  SharedSDL_EndTiming(PERF_INDEX_PPU_PIXEL_OUT);
 
   // Calculate next scanline position
   ppu->HCount++;
@@ -620,11 +643,11 @@ void PPU_Tick(PPU_t *ppu)
   // However, on uneven frames with rendering enabled we skip the last cycle of
   // the pre-render scanline (-1 here)
   if (ppu->HCount == 341 ||
-      (!ppu->IsEvenFrame && CR8_IsBitSet(ppu->Mask, MASKFLAG_BACKGROUND) && ppu->HCount == 340 && isPreRenderScanline))
+      (isPreRenderScanline && ppu->HCount == 340 && !ppu->IsEvenFrame && CR8_IsBitSet(ppu->Mask, MASKFLAG_BACKGROUND)))
   {
     ppu->HCount = 0;
     ppu->VCount++;
-    if (ppu->VCount >= PPU_NUM_SCANLINES)
+    if (ppu->VCount == PPU_NUM_SCANLINES)
     {
       ppu->VCount = 0;
       ppu->IsEvenFrame = !ppu->IsEvenFrame;
@@ -632,7 +655,7 @@ void PPU_Tick(PPU_t *ppu)
     }
   }
 
-  SharedSDL_EndTiming(2);
+  SharedSDL_EndTiming(PERF_INDEX_PPU);
 }
 
 u8_t PPU_ReadFromCpu(PPU_t *ppu, u16_t address)

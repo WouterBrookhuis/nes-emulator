@@ -88,8 +88,12 @@ void NES_TickClock(void)
     PPU_ClockRegisters(&_ppu);
   }
 
-  _ppuTicker = (_ppuTicker + 1) & 0x1;
-  _cpuTicker = (_cpuTicker + 1) % 6;
+  // Increment the prescaler counters
+  _ppuTicker = !_ppuTicker;
+  if(++_cpuTicker >= 6)
+  {
+    _cpuTicker = 0;
+  }
 
   _clockCycleCount++;
 }

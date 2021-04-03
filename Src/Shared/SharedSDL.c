@@ -21,11 +21,9 @@ typedef struct
   SharedSDL_EventHandler userEventHandler;
 } ControlBlock_t;
 
-#define MAX_PERF_TIMER_STACK_DEPTH    (20)
-
-uint64_t _perfTimerStack[MAX_PERF_TIMER_STACK_DEPTH];
-uint64_t _perfTimerAccum[MAX_PERF_TIMER_STACK_DEPTH];
-uint32_t _perfTimerCount[MAX_PERF_TIMER_STACK_DEPTH];
+uint64_t _perfTimerStack[NR_OF_PERF_COUNTERS];
+uint64_t _perfTimerAccum[NR_OF_PERF_COUNTERS];
+uint32_t _perfTimerCount[NR_OF_PERF_COUNTERS];
 unsigned int _perfTimerStackIndex;
 
 
@@ -90,8 +88,6 @@ int SharedSDL_Start()
   {
     frameStartTicks = SDL_GetTicks();
 
-    SharedSDL_BeginTiming(0);
-
     while (SDL_PollEvent(&event))
     {
       switch (event.type)
@@ -116,10 +112,6 @@ int SharedSDL_Start()
       }
     }
 
-    SharedSDL_EndTiming(0);
-
-    SharedSDL_BeginTiming(1);
-
     memset(windowSurface->pixels, 0x00, windowSurface->h * windowSurface->pitch);
 
     if (_controlBlock.draw != NULL)
@@ -127,35 +119,30 @@ int SharedSDL_Start()
       _controlBlock.draw(windowSurface);
     }
 
-    SharedSDL_EndTiming(1);
-
-//    frameEndTicks = SDL_GetTicks();
-//    frameTickDuration = frameEndTicks - frameStartTicks;
-//    if (frameTickDuration < _controlBlock.targetFrameTime_ms)
-//    {
-//      deltaTime = _controlBlock.targetFrameTime_ms / 1000.0;
-//      SDL_Delay(_controlBlock.targetFrameTime_ms - frameTickDuration);
-//    }
-//    else
-//    {
-//      deltaTime = frameTickDuration / 1000.0;
-//    }
+    frameEndTicks = SDL_GetTicks();
+    frameTickDuration = frameEndTicks - frameStartTicks;
+    if (frameTickDuration < _controlBlock.targetFrameTime_ms)
+    {
+      deltaTime = _controlBlock.targetFrameTime_ms / 1000.0;
+      SDL_Delay(_controlBlock.targetFrameTime_ms - frameTickDuration);
+    }
+    else
+    {
+      deltaTime = frameTickDuration / 1000.0;
+    }
 
     SDL_UpdateWindowSurface(window);
 
-//    SharedSDL_PrintTiming(0, "Update");
-//    SharedSDL_PrintTiming(1, "Draw");
-//    SharedSDL_PrintTiming(2, "PPU");
-//    SharedSDL_PrintTiming(3, "CPU");
+#if ENABLE_PERF_TIMING
+    for(uint_fast8_t i = 0; i < NR_OF_PERF_COUNTERS; i++)
+    {
+      printf("%I64u, ", _perfTimerAccum[i]);
+      SharedSDL_ResetTiming(i);
+    }
 
-//
-//    for(uint_fast8_t i = 0; i < 5; i++)
-//    {
-//      printf("%I64u, ", _perfTimerAccum[i]);
-//      SharedSDL_ResetTiming(i);
-//    }
-//
-//    printf("\n");
+    printf("\n");
+#endif
+
     fflush(stdout);
   }
 
@@ -167,6 +154,7 @@ int SharedSDL_Start()
   return 0;
 }
 
+#if ENABLE_PERF_TIMING
 void SharedSDL_BeginTiming(unsigned int index)
 {
   _perfTimerStack[index] = SDL_GetPerformanceCounter();
@@ -195,6 +183,7 @@ void SharedSDL_PrintTiming(unsigned int index, const char *name)
 
   LogMessage("[%s] Avg: %lu Total: %lu", name, avg, _perfTimerAccum[index]);
 }
+#endif
 
 SDL_Surface* SharedSDL_LoadImage(const char* filepath)
 {
