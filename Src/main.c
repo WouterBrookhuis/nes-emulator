@@ -30,6 +30,8 @@ static void Draw(SDL_Surface* surface);
 
 static void Event(SDL_Event* event);
 
+static void AudioCallback(SDL_AudioDeviceID device, int32_t *samples, uint32_t numSamples, uint32_t sampleRate);
+
 #define HALF_MEM_WINDOW_SIZE  7
 #define MEM2_WINDOW_SIZE      16
 
@@ -93,7 +95,7 @@ int main(int argc, char* argv[])
 {
   int sdlReturnCode;
 
-  SharedSDL_Initialize(WINDOW_WIDTH, WINDOW_HEIGHT, "My Nes Emulator Thingy", Initialize, Update, Draw, Event);
+  SharedSDL_Initialize(WINDOW_WIDTH, WINDOW_HEIGHT, "My Nes Emulator Thingy", Initialize, Update, Draw, Event, AudioCallback);
   sdlReturnCode = SharedSDL_Start();
 
   return sdlReturnCode;
@@ -176,6 +178,20 @@ static void DrawPatternTable(Bus_t *bus, u16_t tableStart, SDL_Surface *surface)
   }
 
   PPU_SetRenderSurface(_ppuRenderSurface);
+}
+
+static float _globalTime_s;
+
+static void AudioCallback(SDL_AudioDeviceID device, int32_t *samples, uint32_t numSamples, uint32_t sampleRate)
+{
+  float dt = 1 / (float) sampleRate;
+  float globalTime_s = _globalTime_s;
+  for (uint32_t i = 0; i < numSamples; i++)
+  {
+    samples[i] = SDL_sinf(880.0f * 2* 3.14159f * globalTime_s) *(INT32_MAX / 2);
+    globalTime_s += dt;
+  }
+  _globalTime_s = globalTime_s;
 }
 
 static void Initialize()
@@ -528,6 +544,15 @@ static bool Update(float deltaTime)
   {
     _run = !_run;
     _runKeyWasPressed = false;
+
+    if (_run)
+    {
+      SharedSDL_StartAudio();
+    }
+    else
+    {
+      SharedSDL_StopAudio();
+    }
   }
 
   if (_stepKeyWasPressed)

@@ -11,7 +11,7 @@
 #include <stdio.h>
 
 #define PALETTE_ENTRIES   0x40
-u8_t _palette[PALETTE_ENTRIES * 3];
+static u8_t _palette[PALETTE_ENTRIES * 3];
 
 void Palette_LoadFrom(const char* file)
 {

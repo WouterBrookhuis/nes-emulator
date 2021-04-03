@@ -19,6 +19,7 @@ typedef struct
   SharedSDL_Update update;
   SharedSDL_Draw draw;
   SharedSDL_EventHandler userEventHandler;
+  SharedSDL_GetAudioSamples getAudioSamples;
 } ControlBlock_t;
 
 uint64_t _perfTimerStack[NR_OF_PERF_COUNTERS];
@@ -26,8 +27,12 @@ uint64_t _perfTimerAccum[NR_OF_PERF_COUNTERS];
 uint32_t _perfTimerCount[NR_OF_PERF_COUNTERS];
 unsigned int _perfTimerStackIndex;
 
+static SDL_AudioDeviceID _audioDevice;
+static SDL_AudioSpec _audioSpec;
 
 static ControlBlock_t _controlBlock;
+
+static void AudioCallback(void *userdata, uint8_t *stream, int len);
 
 void SharedSDL_Initialize(int windowWidth,
                           int windowHeight,
@@ -35,7 +40,8 @@ void SharedSDL_Initialize(int windowWidth,
                           SharedSDL_PreStart preStart,
                           SharedSDL_Update update,
                           SharedSDL_Draw draw,
-                          SharedSDL_EventHandler eventHandler)
+                          SharedSDL_EventHandler eventHandler,
+                          SharedSDL_GetAudioSamples audioCallback)
 {
   _controlBlock.windowWidth = windowWidth;
   _controlBlock.windowHeight = windowHeight;
@@ -44,6 +50,7 @@ void SharedSDL_Initialize(int windowWidth,
   _controlBlock.preStart = preStart;
   _controlBlock.update = update;
   _controlBlock.userEventHandler = eventHandler;
+  _controlBlock.getAudioSamples = audioCallback;
   _controlBlock.targetFrameTime_ms = 16;
 }
 
@@ -51,7 +58,7 @@ int SharedSDL_Start()
 {
   SDL_Window *window = NULL;
   SDL_Surface *windowSurface = NULL;
-  if (SDL_Init(SDL_INIT_VIDEO) < 0)
+  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
   {
     LogError("Unable to Init SDL, Error: %s", SDL_GetError());
     return -1;
@@ -69,6 +76,31 @@ int SharedSDL_Start()
     goto quit_on_error;
   }
   windowSurface = SDL_GetWindowSurface(window);
+
+  int numAudioDevices = SDL_GetNumAudioDevices(0);
+  LogMessage("Found %d audio devices", numAudioDevices);
+  for (int i = 0; i < numAudioDevices; i++)
+  {
+    const char* name = SDL_GetAudioDeviceName(i, 0);
+    LogMessage("[%d] %s", i, name);
+  }
+
+  SDL_AudioSpec want;
+  SDL_zero(want);
+  want.freq = 44100;
+  want.format = AUDIO_S32;
+  want.channels = 1;
+  want.samples = 1024;
+  want.callback = AudioCallback;
+
+  _audioDevice = SDL_OpenAudioDevice(NULL, 0, &want, &_audioSpec, 0);
+  if (0 == _audioDevice)
+  {
+    LogError("Unable to open audio device, Error: %s", SDL_GetError());
+    goto close_window_on_error;
+  }
+
+  SharedSDL_StartAudio();
 
   if (_controlBlock.preStart != NULL)
   {
@@ -146,12 +178,23 @@ int SharedSDL_Start()
     fflush(stdout);
   }
 
-  //close_window_on_error:
+  SDL_CloseAudioDevice(_audioDevice);
+  close_window_on_error:
   SDL_DestroyWindow(window);
   quit_on_error:
   SDL_Quit();
 
   return 0;
+}
+
+void SharedSDL_StopAudio()
+{
+  SDL_PauseAudioDevice(_audioDevice, 1);
+}
+
+void SharedSDL_StartAudio()
+{
+  SDL_PauseAudioDevice(_audioDevice, 0);
 }
 
 #if ENABLE_PERF_TIMING
@@ -194,4 +237,9 @@ SDL_Surface* SharedSDL_LoadImage(const char* filepath)
         return NULL;
     }
     return image;
+}
+
+static void AudioCallback(void *userdata, uint8_t *stream, int len)
+{
+  _controlBlock.getAudioSamples(_audioDevice, (int32_t*) stream, len / sizeof(int32_t), _audioSpec.freq);
 }

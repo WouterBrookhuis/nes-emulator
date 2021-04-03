@@ -61,6 +61,7 @@ bool Mapper000_ReadFromCpu(Mapper_t *mapper,
 
     u32_t index = address - externalBankBaseAddress
         + internalBankBaseAddress;
+    NES_ASSERT(index < mapper->MemorySize);
     *data = mapper->Memory[index];
     return true;
   }
@@ -115,6 +116,7 @@ bool Mapper000_WriteFromCpu(Mapper_t *mapper,
 
     u32_t index = address - externalBankBaseAddress
         + internalBankBaseAddress;
+    NES_ASSERT(index < mapper->MemorySize);
     mapper->Memory[index] = data;
     return true;
   }
@@ -131,7 +133,9 @@ bool Mapper000_ReadFromPpu(Mapper_t *mapper,
     if (mapper->NumChrBanks > 0)
     {
       // PPU CHR ROM
-      *data = mapper->Memory[address + mapper->ChrOffset];
+      u32_t offset = address + mapper->ChrOffset;
+      NES_ASSERT(offset < mapper->MemorySize);
+      *data = mapper->Memory[offset];
       return true;
     }
   }

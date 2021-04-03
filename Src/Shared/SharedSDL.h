@@ -31,6 +31,7 @@ typedef void (*SharedSDL_PreStart)(void);
 typedef bool (*SharedSDL_Update)(float);
 typedef void (*SharedSDL_Draw)(SDL_Surface*);
 typedef void (*SharedSDL_EventHandler)(SDL_Event*);
+typedef void (*SharedSDL_GetAudioSamples)(SDL_AudioDeviceID device, int32_t *samples, uint32_t numSamples, uint32_t sampleRate);
 
 void SharedSDL_Initialize(int windowWidth,
                           int windowHeight,
@@ -38,9 +39,14 @@ void SharedSDL_Initialize(int windowWidth,
                           SharedSDL_PreStart preStart,
                           SharedSDL_Update update,
                           SharedSDL_Draw draw,
-                          SharedSDL_EventHandler eventHandler);
+                          SharedSDL_EventHandler eventHandler,
+                          SharedSDL_GetAudioSamples audioCallback);
 
 int SharedSDL_Start();
+
+void SharedSDL_StopAudio();
+
+void SharedSDL_StartAudio();
 
 SDL_Surface* SharedSDL_LoadImage(const char* filepath);
 

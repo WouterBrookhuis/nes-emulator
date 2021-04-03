@@ -16,10 +16,10 @@
 #include <string.h>
 
 // TODO: RAM?
-u8_t _testRam[0x800];
-u8_t _palette[256];
-u8_t _vram[2048];
-u8_t _pattern[8192];
+static u8_t _testRam[0x800];
+static u8_t _palette[256];
+static u8_t _vram[2048];
+static u8_t _pattern[8192];
 
 static u8_t ReadNametableDefault(const Bus_t *bus, u16_t address);
 
