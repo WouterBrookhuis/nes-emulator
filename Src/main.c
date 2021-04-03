@@ -42,11 +42,14 @@ static void Event(SDL_Event* event);
 #define STATUS_BAR_ROWS     2
 #define STATUS_BAR_HEIGHT   (FONT_SIZE * STATUS_BAR_ROWS) // Height of the top of screen status bar
 
+#define FOOTER_ROWS         2
+#define FOOTER_HEIGHT       (FONT_SIZE * FOOTER_ROWS)     // Height of the bottom of screen status bar
+
 #define DEBUG_VIEW_CHARS    32          // Number of chars that fit in the debug view
 #define DEBUG_VIEW_WIDTH    (FONT_SIZE * DEBUG_VIEW_CHARS)  // Width of debug view next to NES screen
 
 #define WINDOW_WIDTH        (NES_SCREEN_WIDTH * NES_SCREEN_SCALE + DEBUG_VIEW_WIDTH)
-#define WINDOW_HEIGHT       (NES_SCREEN_HEIGHT * NES_SCREEN_SCALE + STATUS_BAR_HEIGHT)
+#define WINDOW_HEIGHT       (NES_SCREEN_HEIGHT * NES_SCREEN_SCALE + STATUS_BAR_HEIGHT + FOOTER_HEIGHT)
 
 #define STATUS_BAR_CHARS_PER_ROW    (WINDOW_WIDTH / FONT_SIZE)  // Number of characters in the status bar
 
@@ -630,8 +633,8 @@ static void Draw(SDL_Surface* surface)
   DrawPalettes(NES_GetBus(), surface, nesScreenRect.w, FONT_SIZE * 29 + 3);
 
   // Debug: state
-  Text_DrawString(surface, _run ? "Running" : "Stopped", 0, surface->h - _font.GlyphHeight, &_font);
-  Text_DrawString(surface, "- P: Pattern, Space: Step, R: Run, S: Status", 8 * _font.GlyphWidth, surface->h - _font.GlyphHeight, &_font);
+  Text_DrawString(surface, _run ? "Run" : "Stop", 0, surface->h - _font.GlyphHeight, &_font);
+  Text_DrawString(surface, "- P: Pattern, Space: Step, F: 1 Frame, R: Run, S: Status", 5 * _font.GlyphWidth, surface->h - _font.GlyphHeight, &_font);
 
   // Debug: FPS
   if (0 == performanceCounterFrequency)
