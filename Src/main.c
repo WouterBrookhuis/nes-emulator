@@ -542,6 +542,9 @@ static bool Update(float deltaTime)
   return true;
 }
 
+static uint64_t prevPerformanceCounter;
+static uint64_t performanceCounterFrequency;
+
 static void Draw(SDL_Surface* surface)
 {
   SDL_Rect nesInternalRect;
@@ -625,6 +628,18 @@ static void Draw(SDL_Surface* surface)
   // Debug: state
   Text_DrawString(surface, _run ? "Running" : "Stopped", 0, surface->h - _font.GlyphHeight, &_font);
   Text_DrawString(surface, "- P: Pattern, Space: Step, R: Run, S: Status", 8 * _font.GlyphWidth, surface->h - _font.GlyphHeight, &_font);
+
+  // Debug: FPS
+  if (0 == performanceCounterFrequency)
+  {
+    performanceCounterFrequency = SDL_GetPerformanceFrequency();
+  }
+
+  uint64_t perfCounter = SDL_GetPerformanceCounter();
+  uint32_t fps = performanceCounterFrequency / (perfCounter - prevPerformanceCounter);
+  snprintf(_statusBarBuffer, sizeof(_statusBarBuffer), "FPS: %u", fps);
+  Text_DrawString(surface, _statusBarBuffer, 0, surface->h - 2 * _font.GlyphHeight, &_font);
+  prevPerformanceCounter = perfCounter;
 }
 
 
