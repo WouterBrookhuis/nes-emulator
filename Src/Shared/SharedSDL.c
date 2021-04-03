@@ -129,17 +129,17 @@ int SharedSDL_Start()
 
     SharedSDL_EndTiming(1);
 
-    frameEndTicks = SDL_GetTicks();
-    frameTickDuration = frameEndTicks - frameStartTicks;
-    if (frameTickDuration < _controlBlock.targetFrameTime_ms)
-    {
-      deltaTime = _controlBlock.targetFrameTime_ms / 1000.0;
-      SDL_Delay(_controlBlock.targetFrameTime_ms - frameTickDuration);
-    }
-    else
-    {
-      deltaTime = frameTickDuration / 1000.0;
-    }
+//    frameEndTicks = SDL_GetTicks();
+//    frameTickDuration = frameEndTicks - frameStartTicks;
+//    if (frameTickDuration < _controlBlock.targetFrameTime_ms)
+//    {
+//      deltaTime = _controlBlock.targetFrameTime_ms / 1000.0;
+//      SDL_Delay(_controlBlock.targetFrameTime_ms - frameTickDuration);
+//    }
+//    else
+//    {
+//      deltaTime = frameTickDuration / 1000.0;
+//    }
 
     SDL_UpdateWindowSurface(window);
 

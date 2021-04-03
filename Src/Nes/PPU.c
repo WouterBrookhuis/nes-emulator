@@ -177,6 +177,22 @@ static uint_fast32_t IsInRange(uint_fast32_t low, uint_fast32_t high, uint_fast3
   return (value - low) <= (high - low);
 }
 
+static uint16_t CalculateSpriteAddress(uint_fast16_t vCount, uint_fast16_t ctrl, const OAMEntry_t *spriteOAM, bool flipVertical)
+{
+  // If CTRLFLAG_SPRITE_ADDRESS (0x80) is set we use base address 0x1000 (0x80 << 5)
+  uint_fast16_t address = (ctrl & CTRLFLAG_SPRITE_ADDRESS) << 5;
+  // Add the tile offset
+  address |= ((uint_fast16_t) spriteOAM->TileIndex << 4);
+  // Add the row offset
+  uint_fast16_t rowOffset = (vCount - (uint_fast16_t) spriteOAM->Y);
+  if (flipVertical)
+  {
+    rowOffset = ~rowOffset;
+  }
+  address |= rowOffset & 0x7;
+  return address;
+}
+
 void PPU_ClockRegisters(PPU_t *ppu)
 {
   if (ppu->PhaseCounter != 1)
@@ -212,7 +228,7 @@ void PPU_Tick(PPU_t *ppu)
   if (isPreRenderScanline || isVisibleScanline)
   {
     // Memory accessing to get background data
-    if ((ppu->HCount >= 1 && ppu->HCount <= 257) || (ppu->HCount >= 321 && ppu->HCount <= 337))
+    if (IsInRange(1, 257, ppu->HCount) || IsInRange(321, 337, ppu->HCount))
     {
       uint8_t pixelCycle = ppu->HCount & 0x07;
 
@@ -270,158 +286,153 @@ void PPU_Tick(PPU_t *ppu)
 
   if (isVisibleScanline)
   {
-    if (ppu->HCount >= 1 && ppu->HCount <= 64)
+    if (IsInRange(1, 256, ppu->HCount))
     {
-      // Sprite evaluation: Clear secondary OAM
-      uint8_t byte = (ppu->HCount - 1) / 2;
-
-      ppu->ActiveSpriteOAMAsPtr[byte] = 0xFF;
-    }
-
-    if (ppu->HCount >= 65 && ppu->HCount <= 256)
-    {
-      // Sprite evaluation: Actually evaluating
-      if (ppu->HCount == 65)
+      if (ppu->HCount < 65)
       {
-        // Initialize ourselves
-        ppu->SpriteEval_SpriteByteIndex = 0;
-        ppu->SpriteEval_OAMSpriteIndex = 0;
-        ppu->SpriteEval_NumberOfSprites = 0;
-        ppu->SpriteEval_TempSpriteData = 0;
-        ppu->SpriteEval_State = SPRITE_EVAL_STATE_NEW_SPRITE;
-      }
-      if (ppu->HCount % 2 == 1)
-      {
-        // Read OAM on uneven cycles
-        ppu->SpriteEval_TempSpriteData = ppu->OAMAsPtr[ppu->SpriteEval_OAMSpriteIndex * 4 + ppu->SpriteEval_SpriteByteIndex];
+        // Sprite evaluation: Clear secondary OAM
+        uint8_t byte = (ppu->HCount - 1) / 2;
+
+        ppu->ActiveSpriteOAMAsPtr[byte] = 0xFF;
       }
       else
       {
-        // Write secondary OAM
-        if (ppu->SpriteEval_NumberOfSprites < 8)
+        // Sprite evaluation: Actually evaluating
+        if (ppu->HCount == 65)
         {
-          ppu->ActiveSpriteOAMAsPtr[ppu->SpriteEval_NumberOfSprites * 4 + ppu->SpriteEval_SpriteByteIndex] = ppu->SpriteEval_TempSpriteData;
+          // Initialize ourselves
+          ppu->SpriteEval_SpriteByteIndex = 0;
+          ppu->SpriteEval_OAMSpriteIndex = 0;
+          ppu->SpriteEval_NumberOfSprites = 0;
+          ppu->SpriteEval_TempSpriteData = 0;
+          ppu->SpriteEval_State = SPRITE_EVAL_STATE_NEW_SPRITE;
+        }
+        if (ppu->HCount & 1)
+        {
+          // Read OAM on uneven cycles
+          ppu->SpriteEval_TempSpriteData = ppu->OAMAsPtr[ppu->SpriteEval_OAMSpriteIndex * 4 + ppu->SpriteEval_SpriteByteIndex];
         }
         else
         {
-          // Read from secondary OAM, so just do nothing here
-        }
-
-        // Do logic after write
-        switch (ppu->SpriteEval_State)
-        {
-        case SPRITE_EVAL_STATE_NEW_SPRITE:
-          // New sprite, check if it is visible based on Y
-          // Note that we evaluate it as if it is displayed THIS line, even though
-          // it will be shown from the next line onwards
-          if (ppu->VCount >= ppu->ActiveSpriteOAM[ppu->SpriteEval_NumberOfSprites].Y && ppu->VCount < ppu->ActiveSpriteOAM[ppu->SpriteEval_NumberOfSprites].Y + 8)
+          // Write secondary OAM
+          if (ppu->SpriteEval_NumberOfSprites < 8)
           {
-            // It is visible, copy the rest of the data
-            ppu->SpriteEval_SpriteByteIndex++;
-            ppu->SpriteEval_State = SPRITE_EVAL_STATE_COPY_SPRITE;
+            ppu->ActiveSpriteOAMAsPtr[ppu->SpriteEval_NumberOfSprites * 4 + ppu->SpriteEval_SpriteByteIndex] = ppu->SpriteEval_TempSpriteData;
           }
           else
           {
-            // Not visible, check next sprite
-            ppu->SpriteEval_OAMSpriteIndex++;
-            if (ppu->SpriteEval_OAMSpriteIndex >= 64)
-            {
-              // Looped trough all sprites
-              ppu->SpriteEval_State = SPRITE_EVAL_STATE_END;
-            }
+            // Read from secondary OAM, so just do nothing here
           }
-          break;
-        case SPRITE_EVAL_STATE_COPY_SPRITE:
-          // Wait until everything has been copied
-          ppu->SpriteEval_SpriteByteIndex++;
-          if (ppu->SpriteEval_SpriteByteIndex >= 4)
-          {
-            ppu->SpriteEval_SpriteByteIndex = 0;
 
-            // All bytes copied, increment
-            ppu->SpriteEval_NumberOfSprites++;
-            ppu->SpriteEval_OAMSpriteIndex++;
-            if (ppu->SpriteEval_OAMSpriteIndex >= 64)
+          // Do logic after write
+          switch (ppu->SpriteEval_State)
+          {
+          case SPRITE_EVAL_STATE_NEW_SPRITE:
+            // New sprite, check if it is visible based on Y
+            // Note that we evaluate it as if it is displayed THIS line, even though
+            // it will be shown from the next line onwards
+            if (IsInRange(ppu->ActiveSpriteOAM[ppu->SpriteEval_NumberOfSprites].Y, ppu->ActiveSpriteOAM[ppu->SpriteEval_NumberOfSprites].Y + 7, ppu->VCount))
             {
-              // Looped trough all sprites
-              ppu->SpriteEval_State = SPRITE_EVAL_STATE_END;
-            }
-            else if (ppu->SpriteEval_NumberOfSprites < 8)
-            {
-              // Find more sprites
-              ppu->SpriteEval_State = SPRITE_EVAL_STATE_NEW_SPRITE;
+              // It is visible, copy the rest of the data
+              ppu->SpriteEval_SpriteByteIndex++;
+              ppu->SpriteEval_State = SPRITE_EVAL_STATE_COPY_SPRITE;
             }
             else
             {
-              // Full
-              ppu->SpriteEval_State = SPRITE_EVAL_STATE_OVERFLOW;
+              // Not visible, check next sprite
+              ppu->SpriteEval_OAMSpriteIndex++;
+              if (ppu->SpriteEval_OAMSpriteIndex >= 64)
+              {
+                // Looped trough all sprites
+                ppu->SpriteEval_State = SPRITE_EVAL_STATE_END;
+              }
             }
+            break;
+          case SPRITE_EVAL_STATE_COPY_SPRITE:
+            // Wait until everything has been copied
+            ppu->SpriteEval_SpriteByteIndex++;
+            if (ppu->SpriteEval_SpriteByteIndex >= 4)
+            {
+              ppu->SpriteEval_SpriteByteIndex = 0;
+
+              // All bytes copied, increment
+              ppu->SpriteEval_NumberOfSprites++;
+              ppu->SpriteEval_OAMSpriteIndex++;
+              if (ppu->SpriteEval_OAMSpriteIndex >= 64)
+              {
+                // Looped trough all sprites
+                ppu->SpriteEval_State = SPRITE_EVAL_STATE_END;
+              }
+              else if (ppu->SpriteEval_NumberOfSprites < 8)
+              {
+                // Find more sprites
+                ppu->SpriteEval_State = SPRITE_EVAL_STATE_NEW_SPRITE;
+              }
+              else
+              {
+                // Full
+                ppu->SpriteEval_State = SPRITE_EVAL_STATE_OVERFLOW;
+              }
+            }
+            break;
+          case SPRITE_EVAL_STATE_OVERFLOW:
+            // Overflow logic
+            // TODO: Sprite overflow
+            ppu->SpriteEval_State = SPRITE_EVAL_STATE_END;
+            break;
+          case SPRITE_EVAL_STATE_END:
+            // Ending state
+            break;
           }
-          break;
-        case SPRITE_EVAL_STATE_OVERFLOW:
-          // Overflow logic
-          // TODO: Sprite overflow
-          ppu->SpriteEval_State = SPRITE_EVAL_STATE_END;
-          break;
-        case SPRITE_EVAL_STATE_END:
-          // Ending state
-          break;
         }
       }
     }
   }
 
-
   if (isVisibleScanline || isPreRenderScanline)
   {
-    if (ppu->HCount >= 257 && ppu->HCount <= 320)
+    if (IsInRange(257, 320, ppu->HCount))
     {
       // Sprite Evaluation: Sprite data loading for the next scanline
-      uint8_t pixelCycle = ppu->HCount % 8;
-      uint8_t spriteIndex = (ppu->HCount - 257) / 8;
+      uint8_t pixelCycle = ppu->HCount & 0x7;
+      uint8_t spriteIndex = (ppu->HCount - 257) >> 3;
 
       // Reset OAM address
       CR8_Write(&ppu->OAMAddress, 0);
 
-      if (pixelCycle == 1)
+      SpriteData_t *activeSprite = &ppu->ActiveSpriteData[spriteIndex];
+
+      switch (pixelCycle)
       {
+      case 1:
         // Fetch garbage NT
         Bus_ReadFromPPU(ppu->Bus, 0x2000 | (ppu->V & 0x0FFF));
-      }
-      else if (pixelCycle == 2)
-      {
+        break;
+      case 2:
         // Move attribute to 'latch'
-        ppu->ActiveSpriteData[spriteIndex].Attributes = ppu->ActiveSpriteOAM[spriteIndex].Attributes;
-      }
-      else if (pixelCycle == 3)
-      {
+        activeSprite->Attributes = ppu->ActiveSpriteOAM[spriteIndex].Attributes;
+        break;
+      case 3:
         // Fetch garbage AT
-        // TODO: Enable again in case read has side effects
-//        Bus_ReadFromPPU(ppu->Bus,
-//                        0x23C0
-//                        | (ppu->V & 0x0C00)
-//                        | ((ppu->V >> 4) & 0x0038)
-//                        | ((ppu->V >> 2) & 0x0007));
+        Bus_ReadFromPPU(ppu->Bus,
+                        0x23C0
+                        | (ppu->V & 0x0C00)
+                        | ((ppu->V >> 4) & 0x0038)
+                        | ((ppu->V >> 2) & 0x0007));
         // Load X coordinate into latch
-        ppu->ActiveSpriteData[spriteIndex].X = ppu->ActiveSpriteOAM[spriteIndex].X;
-      }
-      else if (pixelCycle == 5)
+        activeSprite->X = ppu->ActiveSpriteOAM[spriteIndex].X;
+        break;
+      case 5:
       {
         // Fetch low sprite tile byte
-        ppu->ActiveSpriteData[spriteIndex].SRPatternLow =
-            Bus_ReadFromPPU(ppu->Bus,
-                            (CR8_IsBitSet(ppu->Ctrl, CTRLFLAG_SPRITE_ADDRESS) ? 0x1000 : 0x000)
-                            + ((uint16_t)ppu->ActiveSpriteOAM[spriteIndex].TileIndex << 4)
-                            + ((ppu->VCount - ppu->ActiveSpriteOAM[spriteIndex].Y) & 0x07) + 0);
+        uint16_t address = CalculateSpriteAddress(ppu->VCount, CR8_Read(ppu->Ctrl), &ppu->ActiveSpriteOAM[spriteIndex], activeSprite->Attributes & ATTRFLAG_FLIP_VERTICAL);
+        activeSprite->SRPatternLow = Bus_ReadFromPPU(ppu->Bus, address);
+        break;
       }
-      else if (pixelCycle == 7)
+      case 7:
       {
-        // Fetch high sprite tile byte
-        ppu->ActiveSpriteData[spriteIndex].SRPatternHigh =
-            Bus_ReadFromPPU(ppu->Bus,
-                            (CR8_IsBitSet(ppu->Ctrl, CTRLFLAG_SPRITE_ADDRESS) ? 0x1000 : 0x000)
-                            + ((uint16_t)ppu->ActiveSpriteOAM[spriteIndex].TileIndex << 4)
-                            + ((ppu->VCount - ppu->ActiveSpriteOAM[spriteIndex].Y) & 0x07) + 8);
+        uint16_t address = CalculateSpriteAddress(ppu->VCount, CR8_Read(ppu->Ctrl), &ppu->ActiveSpriteOAM[spriteIndex], activeSprite->Attributes & ATTRFLAG_FLIP_VERTICAL) + 8;
+        activeSprite->SRPatternHigh = Bus_ReadFromPPU(ppu->Bus, address);
 
         // Do horizontal mirroring
         if (ppu->ActiveSpriteData[spriteIndex].Attributes & ATTRFLAG_FLIP_HORIZONTAL)
@@ -429,38 +440,10 @@ void PPU_Tick(PPU_t *ppu)
           ppu->ActiveSpriteData[spriteIndex].SRPatternLow = ReverseByte(ppu->ActiveSpriteData[spriteIndex].SRPatternLow);
           ppu->ActiveSpriteData[spriteIndex].SRPatternHigh = ReverseByte(ppu->ActiveSpriteData[spriteIndex].SRPatternHigh);
         }
+        break;
       }
-    }
-
-    // Update shifters and counters
-    if ((ppu->HCount >= 2 && ppu->HCount <= 257) || (ppu->HCount >= 322 && ppu->HCount <= 337))
-    {
-      if (CR8_IsBitSet(ppu->Mask, MASKFLAG_BACKGROUND))
-      {
-        // Shift the shift registers
-        ppu->SRAttributeHigh <<= 1;
-        ppu->SRAttributeLow <<= 1;
-        ppu->SRPatternHigh <<= 1;
-        ppu->SRPatternLow <<= 1;
-      }
-
-      if (CR8_IsBitSet(ppu->Mask, MASKFLAG_SPRITES) && (ppu->HCount >= 2 && ppu->HCount <= 257))
-      {
-        for (int_fast8_t i = 0; i < 8; i++)
-        {
-          if (ppu->ActiveSpriteData[i].X > 0)
-          {
-            // Decrement
-            ppu->ActiveSpriteData[i].X--;
-          }
-          else
-          {
-            // Shift registers to the side
-            // TODO: When a sprite is drawn at X = 0, this will happen 1 cycle too soon
-            ppu->ActiveSpriteData[i].SRPatternHigh <<= 1;
-            ppu->ActiveSpriteData[i].SRPatternLow <<= 1;
-          }
-        }
+      default:
+        break;
       }
     }
   }
@@ -490,7 +473,7 @@ void PPU_Tick(PPU_t *ppu)
   if (CR8_IsBitSet(ppu->Mask, MASKFLAG_SPRITES))
   {
     // Find a sprite pixel to draw
-    for (int i = 0; i < 8; i++)
+    for (uint_fast8_t i = 0; i < 8; i++)
     {
       if (ppu->ActiveSpriteData[i].X == 0)
       {
@@ -562,29 +545,65 @@ void PPU_Tick(PPU_t *ppu)
 
 
   // Address increment things
-  // TODO: Shouldn't this be moved down?
-  if (IsRendering(ppu) && (isPreRenderScanline || isVisibleScanline))
+  if ((isPreRenderScanline || isVisibleScanline))
   {
-    if (ppu->HCount == 256)
+    // Update shifters and counters
+    bool isVisibleHCount = IsInRange(2, 257, ppu->HCount);
+
+    if (isVisibleHCount || IsInRange(322, 337, ppu->HCount))
     {
-      IncrementY(ppu);
-    }
-    if (ppu->HCount == 257)
-    {
-      // Copy horizontal position from T to V
-      ppu->V = (ppu->T & 0x041F) | (ppu->V & ~0x041F);
-    }
-    if (isPreRenderScanline && ppu->HCount >= 280 && ppu->HCount <= 304)
-    {
-      // Copy vertical bits from T to V
-      ppu->V = (ppu->T & ~0x041F) | (ppu->V & 0x041F);
-    }
-    if (ppu->HCount != 0 && (ppu->HCount <= 256 || ppu->HCount >= 328))
-    {
-      // Increment horizontal of V every 8 dots (except at dot 0)
-      if (ppu->HCount % 8 == 0)
+      if (CR8_IsBitSet(ppu->Mask, MASKFLAG_BACKGROUND))
       {
-        IncrementCoarseX(ppu);
+        // Shift the shift registers
+        ppu->SRAttributeHigh <<= 1;
+        ppu->SRAttributeLow <<= 1;
+        ppu->SRPatternHigh <<= 1;
+        ppu->SRPatternLow <<= 1;
+      }
+    }
+
+    if (isVisibleHCount && CR8_IsBitSet(ppu->Mask, MASKFLAG_SPRITES))
+    {
+      for (int_fast8_t i = 0; i < 8; i++)
+      {
+        if (ppu->ActiveSpriteData[i].X > 0)
+        {
+          // Decrement
+          ppu->ActiveSpriteData[i].X--;
+        }
+        else
+        {
+          // Shift registers to the side
+          // TODO: When a sprite is drawn at X = 0, this will happen 1 cycle too soon
+          ppu->ActiveSpriteData[i].SRPatternHigh <<= 1;
+          ppu->ActiveSpriteData[i].SRPatternLow <<= 1;
+        }
+      }
+    }
+
+    if (IsRendering(ppu))
+    {
+      if (ppu->HCount == 256)
+      {
+        IncrementY(ppu);
+      }
+      if (ppu->HCount == 257)
+      {
+        // Copy horizontal position from T to V
+        ppu->V = (ppu->T & 0x041F) | (ppu->V & ~0x041F);
+      }
+      if (isPreRenderScanline && ppu->HCount >= 280 && ppu->HCount <= 304)
+      {
+        // Copy vertical bits from T to V
+        ppu->V = (ppu->T & ~0x041F) | (ppu->V & 0x041F);
+      }
+      if (ppu->HCount != 0 && (ppu->HCount <= 256 || ppu->HCount >= 328))
+      {
+        // Increment horizontal of V every 8 dots (except at dot 0)
+        if (ppu->HCount % 8 == 0)
+        {
+          IncrementCoarseX(ppu);
+        }
       }
     }
   }
