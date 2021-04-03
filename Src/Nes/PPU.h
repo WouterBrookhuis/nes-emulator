@@ -13,6 +13,9 @@
 #include <SDL2/SDL.h>
 #include "ClockedRegister.h"
 
+#define PPU_NUM_SCANLINES         (262)
+#define PPU_PRE_RENDER_SCANLINE   (PPU_NUM_SCANLINES - 1)
+
 typedef struct _Bus_t Bus_t;
 
 #pragma pack(push, 1)
@@ -63,11 +66,10 @@ typedef struct _PPU_t
   uint8_t DataBuffer;       // Buffer for Data register reads (they are delayed)
   uint8_t LatchedData;      // Represents data lines still having the previous values when
                             // reading from non readable registers (it returns this instead)
-  uint8_t SuppressNMI;      // Used to suppress automatic VBlank NMI if STATUS is read shortly before VBLANK is set
 
   // Frame lines
-  int VCount;               // Scanline, pre-render is -1
-  int HCount;               // Dot (or pixel) horizontally on the scanline, starts at 0
+  uint_fast16_t VCount;     // Scanline
+  uint_fast16_t HCount;     // Dot (or pixel) horizontally on the scanline, starts at 0
   bool IsEvenFrame;         // Toggle indicating if we are on an odd or even frame
 
   // VRAM Address Registers

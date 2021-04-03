@@ -109,7 +109,7 @@ void PPU_Initialize(PPU_t *ppu)
   CR8_WriteImmediate(&ppu->Scroll, 0x00);
   CR8_WriteImmediate(&ppu->Data, 0x00);
 
-  ppu->VCount = -1;
+  ppu->VCount = PPU_PRE_RENDER_SCANLINE;
 
   ppu->OAMAsPtr = (uint8_t *)&ppu->OAM;
   ppu->ActiveSpriteOAMAsPtr = (uint8_t *)&ppu->ActiveSpriteOAM;
@@ -172,6 +172,11 @@ static void IncrementY(PPU_t *ppu)
   }
 }
 
+static uint_fast32_t IsInRange(uint_fast32_t low, uint_fast32_t high, uint_fast32_t value)
+{
+  return (value - low) <= (high - low);
+}
+
 void PPU_ClockRegisters(PPU_t *ppu)
 {
   if (ppu->PhaseCounter != 1)
@@ -192,6 +197,9 @@ void PPU_Tick(PPU_t *ppu)
 {
   SharedSDL_BeginTiming(2);
 
+  bool isPreRenderScanline = (PPU_PRE_RENDER_SCANLINE == ppu->VCount);
+  bool isVisibleScanline = IsInRange(0, 239, ppu->VCount);
+
   ppu->PhaseCounter = 1;
 
   // Increment cycles
@@ -200,17 +208,8 @@ void PPU_Tick(PPU_t *ppu)
 
   // Do PPU things
 
-  // Pre-render scanline
-  if (ppu->VCount == -1)
-  {
-    if (ppu->HCount == 1)
-    {
-      // Some flags are cleared here
-      CR8_ClearBits(&ppu->Status, STATFLAG_VBLANK | STATFLAG_SPRITE_0_HIT | STATFLAG_SPRITE_OVERFLOW);
-    }
-  }
   // Visible scanlines and pre-render scanline
-  if (ppu->VCount >= -1 && ppu->VCount <= 239)
+  if (isPreRenderScanline || isVisibleScanline)
   {
     // Memory accessing to get background data
     if ((ppu->HCount >= 1 && ppu->HCount <= 257) || (ppu->HCount >= 321 && ppu->HCount <= 337))
@@ -267,8 +266,11 @@ void PPU_Tick(PPU_t *ppu)
                                               + ((ppu->V >> 12) & 0x07) + 8);
       }
     }
+  }
 
-    if (ppu->VCount >= 0 && ppu->HCount >= 1 && ppu->HCount <= 64)
+  if (isVisibleScanline)
+  {
+    if (ppu->HCount >= 1 && ppu->HCount <= 64)
     {
       // Sprite evaluation: Clear secondary OAM
       uint8_t byte = (ppu->HCount - 1) / 2;
@@ -276,7 +278,7 @@ void PPU_Tick(PPU_t *ppu)
       ppu->ActiveSpriteOAMAsPtr[byte] = 0xFF;
     }
 
-    if (ppu->VCount >= 0  && ppu->HCount >= 65 && ppu->HCount <= 256)
+    if (ppu->HCount >= 65 && ppu->HCount <= 256)
     {
       // Sprite evaluation: Actually evaluating
       if (ppu->HCount == 65)
@@ -291,16 +293,14 @@ void PPU_Tick(PPU_t *ppu)
       if (ppu->HCount % 2 == 1)
       {
         // Read OAM on uneven cycles
-        ppu->SpriteEval_TempSpriteData = ppu->OAMAsPtr[ppu->SpriteEval_OAMSpriteIndex * 4
-                                                       + ppu->SpriteEval_SpriteByteIndex];
+        ppu->SpriteEval_TempSpriteData = ppu->OAMAsPtr[ppu->SpriteEval_OAMSpriteIndex * 4 + ppu->SpriteEval_SpriteByteIndex];
       }
       else
       {
         // Write secondary OAM
         if (ppu->SpriteEval_NumberOfSprites < 8)
         {
-          ppu->ActiveSpriteOAMAsPtr[ppu->SpriteEval_NumberOfSprites * 4
-                                    + ppu->SpriteEval_SpriteByteIndex] = ppu->SpriteEval_TempSpriteData;
+          ppu->ActiveSpriteOAMAsPtr[ppu->SpriteEval_NumberOfSprites * 4 + ppu->SpriteEval_SpriteByteIndex] = ppu->SpriteEval_TempSpriteData;
         }
         else
         {
@@ -314,8 +314,7 @@ void PPU_Tick(PPU_t *ppu)
           // New sprite, check if it is visible based on Y
           // Note that we evaluate it as if it is displayed THIS line, even though
           // it will be shown from the next line onwards
-          if (ppu->VCount >= ppu->ActiveSpriteOAM[ppu->SpriteEval_NumberOfSprites].Y
-              && ppu->VCount < ppu->ActiveSpriteOAM[ppu->SpriteEval_NumberOfSprites].Y + 8)
+          if (ppu->VCount >= ppu->ActiveSpriteOAM[ppu->SpriteEval_NumberOfSprites].Y && ppu->VCount < ppu->ActiveSpriteOAM[ppu->SpriteEval_NumberOfSprites].Y + 8)
           {
             // It is visible, copy the rest of the data
             ppu->SpriteEval_SpriteByteIndex++;
@@ -370,7 +369,11 @@ void PPU_Tick(PPU_t *ppu)
         }
       }
     }
+  }
 
+
+  if (isVisibleScanline || isPreRenderScanline)
+  {
     if (ppu->HCount >= 257 && ppu->HCount <= 320)
     {
       // Sprite Evaluation: Sprite data loading for the next scanline
@@ -443,7 +446,7 @@ void PPU_Tick(PPU_t *ppu)
 
       if (CR8_IsBitSet(ppu->Mask, MASKFLAG_SPRITES) && (ppu->HCount >= 2 && ppu->HCount <= 257))
       {
-        for (int i = 0; i < 8; i++)
+        for (int_fast8_t i = 0; i < 8; i++)
         {
           if (ppu->ActiveSpriteData[i].X > 0)
           {
@@ -461,19 +464,6 @@ void PPU_Tick(PPU_t *ppu)
       }
     }
   }
-
-  // Post render scanline + 1
-  if (ppu->VCount == 241)
-  {
-    if (ppu->HCount == 1)
-    {
-      // Set VBLANK flag here
-      CR8_SetBits(&ppu->Status, STATFLAG_VBLANK);
-    }
-  }
-
-  // NMI line is enabled iff it's enabled in CTRL and STATUS has VBLANK active
-  Bus_NMI(ppu->Bus, CR8_IsBitSet(ppu->Ctrl, CTRLFLAG_VBLANK_NMI) && CR8_IsBitSet(ppu->Status, STATFLAG_VBLANK));
 
   // Try to render a pixel
   uint8_t bgPixel = 0;
@@ -549,9 +539,31 @@ void PPU_Tick(PPU_t *ppu)
     }
   }
 
+  // Flag updating
+  if (ppu->HCount == 1)
+  {
+    // Pre-render scanline
+    if (isPreRenderScanline)
+    {
+      // Some flags are cleared here
+      CR8_ClearBits(&ppu->Status, STATFLAG_VBLANK | STATFLAG_SPRITE_0_HIT | STATFLAG_SPRITE_OVERFLOW);
+    }
+
+    // Post render scanline + 1
+    if (ppu->VCount == 241)
+    {
+      // Set VBLANK flag here
+      CR8_SetBits(&ppu->Status, STATFLAG_VBLANK);
+    }
+  }
+
+  // NMI line is enabled iff it's enabled in CTRL and STATUS has VBLANK active
+  Bus_NMI(ppu->Bus, CR8_IsBitSet(ppu->Ctrl, CTRLFLAG_VBLANK_NMI) && CR8_IsBitSet(ppu->Status, STATFLAG_VBLANK));
+
+
   // Address increment things
   // TODO: Shouldn't this be moved down?
-  if (IsRendering(ppu) && ppu->VCount >= -1 && ppu->VCount <= 239)
+  if (IsRendering(ppu) && (isPreRenderScanline || isVisibleScanline))
   {
     if (ppu->HCount == 256)
     {
@@ -562,7 +574,7 @@ void PPU_Tick(PPU_t *ppu)
       // Copy horizontal position from T to V
       ppu->V = (ppu->T & 0x041F) | (ppu->V & ~0x041F);
     }
-    if (ppu->VCount == -1 && ppu->HCount >= 280 && ppu->HCount <= 304)
+    if (isPreRenderScanline && ppu->HCount >= 280 && ppu->HCount <= 304)
     {
       // Copy vertical bits from T to V
       ppu->V = (ppu->T & ~0x041F) | (ppu->V & 0x041F);
@@ -586,13 +598,13 @@ void PPU_Tick(PPU_t *ppu)
   // However, on uneven frames with rendering enabled we skip the last cycle of
   // the pre-render scanline (-1 here)
   if (ppu->HCount == 341 ||
-      (!ppu->IsEvenFrame && CR8_IsBitSet(ppu->Mask, MASKFLAG_BACKGROUND) && ppu->HCount == 340 && ppu->VCount == -1))
+      (!ppu->IsEvenFrame && CR8_IsBitSet(ppu->Mask, MASKFLAG_BACKGROUND) && ppu->HCount == 340 && isPreRenderScanline))
   {
     ppu->HCount = 0;
     ppu->VCount++;
-    if (ppu->VCount == 261)
+    if (ppu->VCount >= PPU_NUM_SCANLINES)
     {
-      ppu->VCount = -1;
+      ppu->VCount = 0;
       ppu->IsEvenFrame = !ppu->IsEvenFrame;
       ppu->FrameCount++;
     }
@@ -695,7 +707,7 @@ void PPU_WriteFromCpu(PPU_t *ppu, uint16_t address, uint8_t data)
     break;
   case 0x0004:
     // OAMData
-    if (IsRendering(ppu) && ppu->VCount >= -1 && ppu->VCount <= 239)
+    if (IsRendering(ppu) && ((ppu->VCount == PPU_PRE_RENDER_SCANLINE) || IsInRange(0, 239, ppu->VCount)))
     {
       // TODO: Behaviour emulation for writes during rendering
       LogWarning("Ignoring OAM Data write during rendering");
